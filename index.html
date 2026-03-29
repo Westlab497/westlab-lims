@@ -1330,11 +1330,13 @@ const SB={
     return d&&d[0]?d[0].data:null;
   },
   async getAll(table){
-    const r=await fetch(`${SUPA_URL}/rest/v1/${table}?select=data&order=updated_at.desc`,
-      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    if(!r.ok)return[];
-    const d=await r.json();
-    return d?d.map(x=>x.data):[];
+    try{
+      const r=await fetch(`${SUPA_URL}/rest/v1/${table}?select=data&order=updated_at.desc`,
+        {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+      if(!r.ok)return[];
+      const d=await r.json();
+      return d?d.map(x=>x.data):[];
+    }catch(e){console.warn('getAll failed for',table,e);return[];}
   },
   async upsert(table,id,data){
     await fetch(`${SUPA_URL}/rest/v1/${table}`,{
@@ -1385,16 +1387,17 @@ let _jobs=[], _refEq=[], _settings=Object.assign({},DEF);
 async function loadAll(){
   showLoadingOverlay(true);
   try{
-    const [jobs,refEq,settingsArr,customers]=await Promise.all([
+    const [jobs,refEq,settingsArr,customers]=await Promise.allSettled([
       SB.getAll('wl_jobs'),
       SB.getAll('wl_ref_equipment'),
       SB.getAll('wl_settings'),
       SB.getAll('wl_customers')
     ]);
-    _jobs=jobs||[];
-    _refEq=refEq||[];
-    _customers=customers||[];
-    if(settingsArr&&settingsArr[0]) _settings=Object.assign({},DEF,settingsArr[0]);
+    _jobs=(jobs.status==='fulfilled'?jobs.value:[])||[];
+    _refEq=(refEq.status==='fulfilled'?refEq.value:[])||[];
+    _customers=(customers.status==='fulfilled'?customers.value:[])||[];
+    const settingsArr2=settingsArr.status==='fulfilled'?settingsArr.value:[];
+    if(settingsArr2&&settingsArr2[0]) _settings=Object.assign({},DEF,settingsArr2[0]);
   }catch(e){console.error('Supabase load error',e);}
   showLoadingOverlay(false);
 }
@@ -1469,14 +1472,19 @@ function doLogout(){
 // ── STARTUP: load settings first, then allow login ──
 let _appReady=false;
 (async function(){
-  // Show loading state on login button
+  // Disable login button while loading
   const loginBtn=document.querySelector('#login-screen .btn-primary');
-  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Loading…';}
-  await loadAll();
-  applySettings(_settings);
-  _appReady=true;
-  // Restore login button
-  if(loginBtn){loginBtn.disabled=false;loginBtn.textContent='Sign In →';}
+  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Connecting…';}
+  try{
+    await loadAll();
+    applySettings(_settings);
+  }catch(e){
+    console.error('Startup error:',e);
+  } finally {
+    // ALWAYS re-enable login, even if Supabase fails
+    _appReady=true;
+    if(loginBtn){loginBtn.disabled=false;loginBtn.textContent='Sign In →';}
+  }
   // Auto-restore session if still valid
   const s=LS.get(SESS,null);
   if(s&&s.user&&(Date.now()-s.time<8*3600*1000)){
