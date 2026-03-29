@@ -231,6 +231,14 @@ textarea.form-control{resize:vertical;min-height:70px;}
 .approval-card-meta{font-size:12px;color:var(--text-muted);margin-bottom:10px;}
 .approval-card-actions{display:flex;gap:8px;margin-top:12px;}
 
+/* ── CUSTOMER AUTOCOMPLETE ── */
+.cust-suggestion{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s;}
+.cust-suggestion:last-child{border-bottom:none;}
+.cust-suggestion:hover,.cust-suggestion.active{background:var(--blue-pale);}
+.cust-suggestion .cust-name{font-weight:700;color:var(--navy);}
+.cust-suggestion .cust-detail{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.cust-suggestion .cust-new{color:var(--blue);font-weight:600;}
+
 /* ── PRINT STYLES ── */
 @media print {
   body > *:not(#modal-cert-preview) { display: none !important; }
@@ -414,6 +422,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
     <div class="nav-section-label">Modules</div>
     <button class="nav-item" id="nav-equipment" onclick="showView('equipment')"><span class="nav-icon">🔧</span> Equipment &amp; Calibration</button>
+    <button class="nav-item" id="nav-customers" onclick="showView('customers')"><span class="nav-icon">🏢</span> Customer Database</button>
     <button class="nav-item" id="nav-ref-eq" onclick="showView('ref-eq')"><span class="nav-icon">🏛️</span> Lab Reference Equipment</button>
     <button class="nav-item hidden-nav" id="nav-my-jobs" onclick="showView('my-jobs')"><span class="nav-icon">📋</span> My Jobs <span class="nav-badge" id="my-jobs-badge" style="display:none;">0</span></button>
     <button class="nav-item hidden-nav" id="nav-approval" onclick="showView('approval')"><span class="nav-icon">✅</span> Approval Queue <span class="nav-badge" id="approval-badge" style="display:none;">0</span></button>
@@ -632,6 +641,38 @@ textarea.form-control{resize:vertical;min-height:70px;}
       </div>
     </div>
 
+    <!-- ════ CUSTOMER DATABASE ════ -->
+    <div class="view" id="view-customers">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🏢 Customer Database</div>
+          <div class="page-sub" id="cust-sub">All registered customers</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddCustomerModal()">+ Add Customer</button>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-mini"><div class="kpi-val" id="cust-kpi-total">0</div><div class="kpi-lbl">Total Customers</div></div>
+        <div class="kpi-mini"><div class="kpi-val" id="cust-kpi-jobs">0</div><div class="kpi-lbl">Total Jobs</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Customer Register</span>
+          <input id="cust-search" class="filter-select" placeholder="Search customer…" style="width:220px;" oninput="renderCustomerTable()"/>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Company Name</th><th>Attention</th><th>Tel</th><th>Mobile</th>
+              <th>Email</th><th>Address</th><th>Jobs</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="customer-tbody">
+              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🏢</div><p>No customers yet. Click "+ Add Customer" to add.</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ════ REFERENCE EQUIPMENT ════ -->
     <div class="view" id="view-ref-eq">
       <div class="page-header">
@@ -763,7 +804,26 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <div class="form-group"><label class="form-label">Job Number</label><input class="form-control" id="eq-job-no" readonly/></div>
         <div class="form-group"><label class="form-label">Receiving Date <span class="req">*</span></label><input class="form-control" id="eq-receive-date" type="date"/></div>
       </div>
-      <div class="form-group"><label class="form-label">Customer / Company Name <span class="req">*</span></label><input class="form-control" id="eq-company" placeholder="e.g. Acme Sdn Bhd"/></div>
+
+      <!-- Customer search autocomplete -->
+      <div class="form-group" style="position:relative;">
+        <label class="form-label">Customer / Company Name <span class="req">*</span></label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-control" id="eq-company" placeholder="Type to search customer database…" autocomplete="off" oninput="customerSearchInput(this.value)" onkeydown="customerSearchKeydown(event)" style="flex:1;"/>
+          <button class="btn btn-outline btn-sm" onclick="openModal('modal-add-customer')" title="Add new customer" style="white-space:nowrap;flex-shrink:0;">+ New</button>
+        </div>
+        <!-- Dropdown suggestions -->
+        <div id="customer-suggestions" style="display:none;position:absolute;top:100%;left:0;right:40px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:500;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+        <!-- Selected customer badge -->
+        <div id="customer-selected-badge" style="display:none;margin-top:8px;background:var(--green-bg);border:1px solid var(--green);border-radius:8px;padding:8px 12px;display:none;align-items:center;justify-content:space-between;">
+          <div>
+            <span style="font-size:12px;color:var(--green);font-weight:700;">✅ Customer loaded from database</span>
+            <span id="customer-selected-name" style="font-size:13px;color:var(--text);font-weight:600;margin-left:8px;"></span>
+          </div>
+          <button onclick="clearCustomerSelection()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">✕</button>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group"><label class="form-label">Attention / Contact Person</label><input class="form-control" id="eq-attention" placeholder="Attn: person name"/></div>
         <div class="form-group"><label class="form-label">PO Number</label><input class="form-control" id="eq-po" placeholder="Purchase order no."/></div>
@@ -1131,6 +1191,35 @@ textarea.form-control{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- ADD / EDIT CUSTOMER -->
+<div class="modal-overlay" id="modal-add-customer">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="customer-modal-title">🏢 Add Customer</span>
+      <button class="modal-close" onclick="closeModal('modal-add-customer')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cust-edit-id"/>
+      <div class="form-group"><label class="form-label">Company / Customer Name <span class="req">*</span></label><input class="form-control" id="cust-company" placeholder="e.g. Acme Sdn Bhd"/></div>
+      <div class="form-group"><label class="form-label">Attention / Contact Person</label><input class="form-control" id="cust-attention" placeholder="e.g. Mr. Ahmad"/></div>
+      <div class="form-group"><label class="form-label">Company Address</label><textarea class="form-control" id="cust-address" placeholder="Full mailing address"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="cust-tel" placeholder="+60-3-XXXX XXXX"/></div>
+        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="cust-mobile" placeholder="+60-1X-XXXX XXXX"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="cust-fax" placeholder="+60-3-XXXX XXXX"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="cust-email" type="email" placeholder="info@company.com"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="cust-notes" placeholder="Any additional notes about this customer…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-customer')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">💾 Save Customer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Simple modals -->
 <div class="modal-overlay" id="modal-add-test"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">New Test Request</span><button class="modal-close" onclick="closeModal('modal-add-test')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Client</label><input class="form-control"/></div><div class="form-group"><label class="form-label">Test Method</label><input class="form-control" placeholder="e.g. ASTM D1293"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-add-test')">Cancel</button><button class="btn btn-primary" onclick="closeModal('modal-add-test')">Submit</button></div></div></div>
 <div class="modal-overlay" id="modal-add-doc"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">New Document</span><button class="modal-close" onclick="closeModal('modal-add-doc')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Document ID</label><input class="form-control" placeholder="e.g. SOP-LAB-016"/></div><div class="form-group"><label class="form-label">Title</label><input class="form-control"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-add-doc')">Cancel</button><button class="btn btn-primary" onclick="closeModal('modal-add-doc')">Create</button></div></div></div>
@@ -1227,15 +1316,100 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
 <!-- ════════════════ JAVASCRIPT ════════════════ -->
 <script>
-// ── STORAGE ──
+// ── SUPABASE CONFIG ──
+const SUPA_URL='https://zwlmrrosranszveoesij.supabase.co';
+const SUPA_KEY='sb_publishable_ZdXBK7ociG0-a-vw299xqA_dHJKIQj1';
+
+// Lightweight Supabase REST client (no npm needed)
+const SB={
+  async get(table,id){
+    const r=await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}&select=data`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d&&d[0]?d[0].data:null;
+  },
+  async getAll(table){
+    const r=await fetch(`${SUPA_URL}/rest/v1/${table}?select=data&order=updated_at.desc`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    if(!r.ok)return[];
+    const d=await r.json();
+    return d?d.map(x=>x.data):[];
+  },
+  async upsert(table,id,data){
+    await fetch(`${SUPA_URL}/rest/v1/${table}`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id,data,updated_at:new Date().toISOString()})
+    });
+  },
+  async delete(table,id){
+    await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+  },
+  async getSeq(){
+    const r=await fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.job_seq&select=val`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const d=await r.json();
+    return d&&d[0]?d[0].val:0;
+  },
+  async incSeq(){
+    // Read then write (atomic enough for small team)
+    const cur=await this.getSeq();
+    const next=cur+1;
+    await fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.job_seq`,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({val:next})
+    });
+    return next;
+  }
+};
+
+// ── LOCAL SESSION ONLY (not shared — just for login state) ──
 const LS={
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
-const SK='wl_settings', EK='wl_equipment', SEQ='wl_job_seq', SESS='wl_session';
+const SESS='wl_session';
 const DEF={labName:'Westlab',accredNum:'WL-2024-0001',accredBody:'ILAC / A2LA',
   techManager:'Lab Manager',address:'123 Lab Street, Kuala Lumpur, Malaysia',
   email:'lab@westlab.com',username:'admin',password:'westlab123'};
+
+// In-memory cache (refreshed from Supabase on load / after changes)
+let _jobs=[], _refEq=[], _settings=Object.assign({},DEF);
+
+async function loadAll(){
+  showLoadingOverlay(true);
+  try{
+    const [jobs,refEq,settingsArr,customers]=await Promise.all([
+      SB.getAll('wl_jobs'),
+      SB.getAll('wl_ref_equipment'),
+      SB.getAll('wl_settings'),
+      SB.getAll('wl_customers')
+    ]);
+    _jobs=jobs||[];
+    _refEq=refEq||[];
+    _customers=customers||[];
+    if(settingsArr&&settingsArr[0]) _settings=Object.assign({},DEF,settingsArr[0]);
+  }catch(e){console.error('Supabase load error',e);}
+  showLoadingOverlay(false);
+}
+
+function showLoadingOverlay(show){
+  let ov=document.getElementById('loading-overlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='loading-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(15,31,61,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:28px 36px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18);"><div style="font-size:28px;margin-bottom:10px;">⏳</div><div style="font-size:15px;font-weight:700;color:#0f1f3d;">Connecting to database…</div><div style="font-size:12px;color:#64748b;margin-top:6px;">Please wait</div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display=show?'flex':'none';
+}
 
 // ── USERS ──
 const USERS={
@@ -1248,15 +1422,13 @@ let currentUser=null; // set on login
 
 // ── LOGIN / LOGOUT ──
 function doLogin(){
-  const s=LS.get(SK,DEF);
+  const s=_settings;
   const u=document.getElementById('login-username').value.trim().toLowerCase();
   const p=document.getElementById('login-password').value;
   const err=document.getElementById('login-error');
-  // Check admin
   if(u===(s.username||'admin') && p===(s.password||'westlab123')){
     setCurrentUser('admin'); return;
   }
-  // Check jay / edmund (passwords fixed; could be extended to settings)
   if(USERS[u] && USERS[u].password && p===USERS[u].password){
     setCurrentUser(u); return;
   }
@@ -1275,7 +1447,13 @@ function setCurrentUser(username){
   av.textContent=u.name.slice(0,2).toUpperCase();
   av.className='avatar '+(u.avatarClass||'');
   applyRoleUI();
-  refreshAllBadges();
+  applySettings(_settings);
+  loadAll().then(()=>{
+    renderEquipmentTable();
+    renderRefEqTable();
+    renderDashboard();
+    refreshAllBadges();
+  });
   addAudit('🔑',`<strong>${u.name}</strong> logged in`);
 }
 function doLogout(){
@@ -1288,9 +1466,13 @@ function doLogout(){
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 });
 // restore session
-(function(){
+(async function(){
+  await loadAll();
+  applySettings(_settings);
   const s=LS.get(SESS,null);
-  if(s&&s.user&&(Date.now()-s.time<8*3600*1000)) setCurrentUser(s.user);
+  if(s&&s.user&&(Date.now()-s.time<8*3600*1000)){
+    setCurrentUser(s.user);
+  }
 })();
 
 // ── ROLE-BASED UI ──
@@ -1319,9 +1501,9 @@ function applyRoleUI(){
 function el(id){return document.getElementById(id);}
 
 // ── NAV ──
-const TITLES={dashboard:'Dashboard',equipment:'Equipment & Calibration','my-jobs':'My Jobs',
-  approval:'Approval Queue',tests:'Test Requests & Results',documents:'Document Control',
-  capa:'Nonconformance & CAPA','ref-eq':'Lab Reference Equipment',
+const TITLES={dashboard:'Dashboard',equipment:'Equipment & Calibration',customers:'Customer Database',
+  'my-jobs':'My Jobs',approval:'Approval Queue',tests:'Test Requests & Results',
+  documents:'Document Control',capa:'Nonconformance & CAPA','ref-eq':'Lab Reference Equipment',
   personnel:'Personnel',reports:'Reports & Audit Logs',settings:'Settings'};
 
 function showView(name){
@@ -1334,6 +1516,7 @@ function showView(name){
   });
   el('topbar-title').textContent=TITLES[name]||name;
   if(name==='equipment') renderEquipmentTable();
+  if(name==='customers') renderCustomerTable();
   if(name==='my-jobs') renderMyJobs();
   if(name==='approval') renderApprovalQueue();
   if(name==='dashboard') renderDashboard();
@@ -1347,6 +1530,7 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click
 
 // ── SETTINGS ──
 function applySettings(s){
+  _settings=Object.assign({},DEF,s);
   const name=s.labName||'Westlab';
   ['sidebar-lab-name','sidebar-lab-label','login-lab-name'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=name;});
   const an=document.getElementById('sidebar-accred-num');if(an)an.textContent=s.accredNum||'';
@@ -1355,8 +1539,8 @@ function applySettings(s){
     techManager:'set-tech-manager',address:'set-address',email:'set-email',username:'set-username'};
   Object.entries(map).forEach(([k,id])=>{const e=document.getElementById(id);if(e&&s[k]!==undefined)e.value=s[k];});
 }
-function saveSettings(){
-  const s=LS.get(SK,DEF);
+async function saveSettings(){
+  const s=Object.assign({},_settings);
   s.labName=el('set-lab-name').value.trim()||'Westlab';
   s.accredNum=el('set-accred-num').value.trim();
   s.accredBody=el('set-accred-body').value.trim();
@@ -1365,26 +1549,28 @@ function saveSettings(){
   s.email=el('set-email').value.trim();
   s.username=el('set-username').value.trim()||'admin';
   const pw=el('set-password').value;if(pw)s.password=pw;
-  LS.set(SK,s); applySettings(s);
+  await SB.upsert('wl_settings','main',s);
+  applySettings(s);
   const b=el('settings-saved-banner');b.style.display='block';setTimeout(()=>b.style.display='none',3000);
   addAudit('⚙️','Settings updated');
 }
 function resetJobCounter(){
   if(!confirm('Reset job counter to 0? The next job will be WL'+new Date().getFullYear().toString().slice(-2)+'-00001.')) return;
-  LS.set(SEQ,0);
-  alert('Counter reset. Next job: '+peekJobNo());
+  fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.job_seq`,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({val:0})
+  }).then(()=>alert('Counter reset successfully!'));
 }
-applySettings(LS.get(SK,DEF));
-
 // ── JOB NUMBER ──
-function peekJobNo(){
+async function peekJobNo(){
   const yr=new Date().getFullYear().toString().slice(-2);
-  return 'WL'+yr+'-'+String(LS.get(SEQ,0)+1).padStart(5,'0');
+  const seq=await SB.getSeq();
+  return 'WL'+yr+'-'+String(seq+1).padStart(5,'0');
 }
-function commitJobNo(){
+async function commitJobNo(){
   const yr=new Date().getFullYear().toString().slice(-2);
-  const seq=LS.get(SEQ,0)+1;
-  LS.set(SEQ,seq);
+  const seq=await SB.incSeq();
   return 'WL'+yr+'-'+String(seq).padStart(5,'0');
 }
 
@@ -1431,13 +1617,18 @@ function removeExcel(){
 }
 
 // ── OPEN NEW JOB MODAL ──
-function openNewJobModal(){
+async function openNewJobModal(){
   if(currentUser!=='admin'){alert('Only admin can create new jobs.');return;}
   currentPhotos=[]; renderPhotoPreviews();
-  el('eq-job-no').value=peekJobNo();
+  el('eq-job-no').value='Generating…';
+  el('eq-job-no').value=await peekJobNo();
   el('eq-receive-date').value=new Date().toISOString().split('T')[0];
   el('eq-condition').value='Good'; el('eq-priority').value='Normal';
   el('eq-condition-other-group').style.display='none';
+  hideCustBadge();
+  _custSelected=false;
+  const suggBox=el('customer-suggestions');
+  if(suggBox) suggBox.style.display='none';
   ['eq-attention','eq-company','eq-address','eq-tel','eq-mobile','eq-fax',
    'eq-email','eq-po','eq-name','eq-brand','eq-model','eq-serial','eq-range',
    'eq-cal-points','eq-spec','eq-accessories','eq-remarks','eq-condition-other'].forEach(id=>{
@@ -1449,7 +1640,7 @@ function toggleConditionOther(){
 }
 
 // ── SAVE NEW JOB ──
-function saveEquipment(){
+async function saveEquipment(){
   const company=el('eq-company').value.trim();
   const eqName=el('eq-name').value.trim();
   if(!company){alert('Customer / Company name is required.');return;}
@@ -1457,8 +1648,9 @@ function saveEquipment(){
   const cond=el('eq-condition').value;
   const condOther=el('eq-condition-other').value.trim();
   if(cond==='Others'&&!condOther){alert('Please specify the item condition.');return;}
+  const jobNo=await commitJobNo();
   const job={
-    jobNo:commitJobNo(),
+    jobNo,
     receiveDate:el('eq-receive-date').value,
     custName:company, company,
     attention:el('eq-attention').value.trim(),
@@ -1476,12 +1668,26 @@ function saveEquipment(){
     calData:null, excelFile:null, approvalComments:'',
     history:[{action:'Job Created',by:'admin',time:new Date().toISOString()}]
   };
-  const list=LS.get(EK,[]);
-  list.unshift(job); LS.set(EK,list);
+  await SB.upsert('wl_jobs',jobNo,job);
+  _jobs.unshift(job);
   closeModal('modal-add-equipment');
   renderEquipmentTable(); renderDashboard(); refreshAllBadges();
-  addAudit('🔧',`Job <strong>${job.jobNo}</strong> created for ${company}`);
+  addAudit('🔧',`Job <strong>${jobNo}</strong> created for ${company}`);
   currentPhotos=[];
+  // Offer to save customer to database if not already there
+  if(!_custSelected && !_customers.find(c=>c.company.toLowerCase()===company.toLowerCase())){
+    if(confirm(`Save "${company}" to the Customer Database for quick access next time?`)){
+      const newCust={
+        id:'CUST-'+Date.now(), company,
+        attention:job.attention, address:job.address,
+        tel:job.tel, mobile:job.mobile, fax:job.fax, email:job.email,
+        notes:'', createdAt:new Date().toISOString()
+      };
+      await SB.upsert(CUST_TABLE,newCust.id,newCust);
+      _customers.unshift(newCust);
+      addAudit('🏢',`Customer <strong>${company}</strong> added to database`);
+    }
+  }
 }
 
 // ── ASSIGN JOB ──
@@ -1496,11 +1702,11 @@ function openAssignModal(jobNo){
   el('assign-note').value='';
   openModal('modal-assign-job');
 }
-function confirmAssign(){
+async function confirmAssign(){
   const to=el('assign-to-select').value;
   if(!to){alert('Please select a user to assign.');return;}
   const note=el('assign-note').value.trim();
-  updateJob(assigningJobNo,j=>{
+  await updateJob(assigningJobNo,j=>{
     j.assignedTo=to; j.status='Assigned'; j.assignNote=note;
     j.history.push({action:`Assigned to ${USERS[to]?.name||to}`,by:currentUser,time:new Date().toISOString(),note});
   });
@@ -1520,11 +1726,11 @@ function openReassignModal(jobNo){
   el('reassign-note').value='';
   openModal('modal-reassign-job');
 }
-function confirmReassign(){
+async function confirmReassign(){
   const to=el('reassign-to-select').value;
   if(!to){alert('Please select a user.');return;}
   const note=el('reassign-note').value.trim();
-  updateJob(reassigningJobNo,j=>{
+  await updateJob(reassigningJobNo,j=>{
     const from=j.assignedTo;
     j.assignedTo=to; j.status='Assigned';
     j.history.push({action:`Re-assigned from ${USERS[from]?.name||from||'?'} to ${USERS[to]?.name||to}`,by:currentUser,time:new Date().toISOString(),note});
@@ -1541,7 +1747,7 @@ function openCalModal(jobNo){
   el('excel-attached').style.display='none';
   el('excel-drop-zone').style.display='block';
   const j=getJob(jobNo);
-  const s=LS.get(SK,DEF);
+  const s=_settings;
   // Job summary bar
   el('cal-job-no').textContent=jobNo;
   el('cal-customer').textContent=j?j.custName:'—';
@@ -1613,7 +1819,7 @@ function addTraceRow(){
     <div><input class="form-control" style="font-size:12px;" type="date"/></div>`;
   tr.appendChild(div);
 }
-function submitCalibration(){
+async function submitCalibration(){
   const result=el('cal-result').value;
   if(!result){alert('Please select a calibration result.');return;}
   if(!currentExcel){alert('Please upload the calibration data file (Page 2 onwards) before submitting.');return;}
@@ -1652,7 +1858,7 @@ function submitCalibration(){
     submittedBy:currentUser,
     submittedAt:new Date().toISOString()
   };
-  updateJob(calJobNo,j=>{
+  await updateJob(calJobNo,j=>{
     j.calData=calData; j.excelFile=currentExcel;
     j.status='Pending Approval';
     j.history.push({action:'Calibration submitted — awaiting approval',by:currentUser,time:new Date().toISOString()});
@@ -1690,14 +1896,13 @@ function openApproveModal(jobNo){
   el('approve-comments').value='';
   openModal('modal-approve-job');
 }
-function approveJob(){
+async function approveJob(){
   const comments=el('approve-comments').value.trim();
-  updateJob(approvalJobNo,j=>{
+  await updateJob(approvalJobNo,j=>{
     j.status='Completed';
     j.approvalComments=comments;
     j.approvedBy=currentUser;
     j.approvedAt=new Date().toISOString();
-    // Stamp approver name into certificate data
     if(j.calData) j.calData.approved_by=USERS[currentUser]?.name||currentUser;
     j.history.push({action:'✅ Approved & Completed',by:currentUser,time:new Date().toISOString(),note:comments});
   });
@@ -1705,17 +1910,17 @@ function approveJob(){
   renderApprovalQueue(); renderDashboard(); refreshAllBadges();
   addAudit('✅',`Job <strong>${approvalJobNo}</strong> approved &amp; completed by <strong>${USERS[currentUser]?.name||currentUser}</strong>`);
 }
-function rejectJob(){
+async function rejectJob(){
   const comments=el('approve-comments').value.trim();
   if(!comments){alert('Please add a comment explaining the rejection reason.');return;}
-  updateJob(approvalJobNo,j=>{
-    j.status='Assigned'; // return to technician
+  await updateJob(approvalJobNo,j=>{
+    j.status='Assigned';
     j.approvalComments=comments;
     j.history.push({action:'✗ Rejected — returned to technician',by:currentUser,time:new Date().toISOString(),note:comments});
   });
   closeModal('modal-approve-job');
   renderApprovalQueue(); renderDashboard(); refreshAllBadges();
-  addAudit('✗',`Job <strong>${approvalJobNo}</strong> rejected by <strong>Jay</strong> — returned to technician`);
+  addAudit('✗',`Job <strong>${approvalJobNo}</strong> rejected — returned to technician`);
 }
 
 // ── RENDER EQUIPMENT TABLE (Admin / Jay) ──
@@ -1723,7 +1928,7 @@ const PB={Urgent:'badge-red',Express:'badge-amber',Normal:'badge-blue',Routine:'
 const SB={Unassigned:'badge-amber',Assigned:'badge-blue','In Progress':'badge-blue','Pending Approval':'badge-purple',Completed:'badge-green'};
 
 function renderEquipmentTable(){
-  const list=LS.get(EK,[]);
+  const list=_jobs;
   const q=(el('eq-search')?.value||'').toLowerCase();
   const sf=el('eq-filter-status')?.value||'';
   const tbody=el('equipment-tbody'); if(!tbody)return;
@@ -1771,7 +1976,7 @@ function renderEquipmentTable(){
 
 // ── RENDER MY JOBS (Technician) ──
 function renderMyJobs(){
-  const list=LS.get(EK,[]).filter(j=>j.assignedTo===currentUser);
+  const list=_jobs.filter(j=>j.assignedTo===currentUser);
   const container=el('my-jobs-list'); if(!container)return;
   el('my-jobs-title').textContent=`My Jobs — ${USERS[currentUser]?.name||currentUser}`;
   el('my-jobs-sub').textContent=`${list.length} job(s) assigned to you`;
@@ -1808,7 +2013,7 @@ function renderMyJobs(){
 
 // ── RENDER APPROVAL QUEUE (Jay) ──
 function renderApprovalQueue(){
-  const list=LS.get(EK,[]).filter(j=>j.status==='Pending Approval');
+  const list=_jobs.filter(j=>j.status==='Pending Approval');
   const container=el('approval-list'); if(!container)return;
   if(!list.length){
     container.innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><p>No jobs pending approval. All clear!</p></div>`;
@@ -1904,16 +2109,22 @@ function viewJobDetail(jobNo){
   openModal('modal-view-job');
 }
 
-function deleteJob(jobNo){
+async function deleteJob(jobNo){
   if(!confirm(`Delete job ${jobNo}? This cannot be undone.`)) return;
-  LS.set(EK,LS.get(EK,[]).filter(j=>j.jobNo!==jobNo));
+  await SB.delete('wl_jobs',jobNo);
+  _jobs=_jobs.filter(j=>j.jobNo!==jobNo);
   renderEquipmentTable(); renderDashboard(); refreshAllBadges();
   addAudit('🗑',`Job <strong>${jobNo}</strong> deleted`);
 }
 
-// ── DASHBOARD ──
+// ── UTILS ──
+function getJob(jobNo){ return _jobs.find(j=>j.jobNo===jobNo)||null; }
+async function updateJob(jobNo,fn){
+  const j=_jobs.find(x=>x.jobNo===jobNo);
+  if(j){ fn(j); await SB.upsert('wl_jobs',jobNo,j); }
+}
 function renderDashboard(){
-  const list=LS.get(EK,[]);
+  const list=_jobs;
   const total=list.length;
   const unassigned=list.filter(j=>j.status==='Unassigned').length;
   const inprog=list.filter(j=>j.status==='Assigned'||j.status==='In Progress').length;
@@ -1943,7 +2154,7 @@ function renderDashboard(){
 
 // ── BADGES ──
 function refreshAllBadges(){
-  const list=LS.get(EK,[]);
+  const list=_jobs;
   const myCount=currentUser?list.filter(j=>j.assignedTo===currentUser&&j.status!=='Completed'&&j.status!=='Pending Approval').length:0;
   const approvalCount=list.filter(j=>j.status==='Pending Approval').length;
   const mb=el('my-jobs-badge');
@@ -1953,19 +2164,13 @@ function refreshAllBadges(){
   renderDashboard();
 }
 
-// ── UTILS ──
-function getJob(jobNo){ return LS.get(EK,[]).find(j=>j.jobNo===jobNo)||null; }
-function updateJob(jobNo,fn){
-  const list=LS.get(EK,[]); const j=list.find(x=>x.jobNo===jobNo);
-  if(j){fn(j);LS.set(EK,list);}
-}
+// ── AUDIT LOG ──
 function addAudit(icon,msg){
   const logEl=el('audit-log-list'); if(!logEl)return;
   const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const d=document.createElement('div'); d.className='activity-item';
   d.innerHTML=`<div class="activity-dot blue">${icon}</div><div><div class="activity-text">${msg}</div><div class="activity-time">Today, ${t}</div></div>`;
   logEl.prepend(d);
-  // also add to dash activity
   const da=el('dash-activity'); if(da){const d2=d.cloneNode(true);da.prepend(d2);while(da.children.length>6)da.removeChild(da.lastChild);}
 }
 
@@ -2004,7 +2209,7 @@ function applyBottomNavRoles(){
   if(bap) bap.style.display=isJay?'flex':'none';
 }
 function updateBottomNavBadges(){
-  const list=LS.get(EK,[]);
+  const list=_jobs;
   const myCount=currentUser?list.filter(j=>j.assignedTo===currentUser&&j.status!=='Completed'&&j.status!=='Pending Approval').length:0;
   const approvalCount=list.filter(j=>j.status==='Pending Approval').length;
   const bm=document.getElementById('bnav-my-badge');
@@ -2038,7 +2243,7 @@ refreshAllBadges=function(){
 
 // ── CERT PAGE 1 PREVIEW ──
 function previewCertPage1(){
-  const s=LS.get(SK,DEF);
+  const s=_settings;
   const cd={
     cert_no:el('cal-cert-no').value||'—',
     page:el('cal-page').value||'1 of —',
@@ -2188,7 +2393,7 @@ function openApproveModal(jobNo){
   approvalJobNo=jobNo;
   const j=getJob(jobNo);
   if(!j)return;
-  const s=LS.get(SK,DEF);
+  const s=_settings;
   const cd=j.calData||{};
 
   // Summary bar
@@ -2226,8 +2431,7 @@ function openApproveModal(jobNo){
 }
 
 // ── REFERENCE EQUIPMENT ──
-const REF_KEY='wl_ref_equipment';
-function saveRefEquipment(){
+async function saveRefEquipment(){
   const id=el('ref-eq-id').value.trim();
   const name=el('ref-eq-name').value.trim();
   const serial=el('ref-eq-serial').value.trim();
@@ -2236,9 +2440,8 @@ function saveRefEquipment(){
   if(!name){alert('Equipment name is required.');return;}
   if(!serial){alert('Serial number is required.');return;}
   if(!dueDate){alert('Calibration due date is required.');return;}
-  const list=LS.get(REF_KEY,[]);
-  if(list.find(r=>r.id===id)){alert('Equipment ID already exists. Please use a unique ID.');return;}
-  list.push({
+  if(_refEq.find(r=>r.id===id)){alert('Equipment ID already exists. Please use a unique ID.');return;}
+  const record={
     id, name, brand:el('ref-eq-brand').value.trim(),
     model:el('ref-eq-model').value.trim(), serial,
     location:el('ref-eq-location').value.trim(),
@@ -2250,12 +2453,12 @@ function saveRefEquipment(){
     calBy:el('ref-eq-cal-by').value.trim(),
     remarks:el('ref-eq-remarks').value.trim(),
     addedAt:new Date().toISOString()
-  });
-  LS.set(REF_KEY,list);
+  };
+  await SB.upsert('wl_ref_equipment',id,record);
+  _refEq.push(record);
   closeModal('modal-add-ref-eq');
   renderRefEqTable();
   addAudit('🏛️',`Reference equipment <strong>${name}</strong> (${id}) added`);
-  // clear fields
   ['ref-eq-id','ref-eq-name','ref-eq-brand','ref-eq-model','ref-eq-serial','ref-eq-location',
    'ref-eq-range','ref-eq-resolution','ref-eq-cert-no','ref-eq-last-cal','ref-eq-due-date','ref-eq-cal-by','ref-eq-remarks'].forEach(f=>{const e=el(f);if(e)e.value='';});
 }
@@ -2269,7 +2472,7 @@ function getRefStatus(dueDate){
   return'Current';
 }
 function renderRefEqTable(){
-  const list=LS.get(REF_KEY,[]);
+  const list=_refEq;
   const q=(el('ref-eq-search')?.value||'').toLowerCase();
   const sf=el('ref-eq-filter')?.value||'';
   const tbody=el('ref-eq-tbody'); if(!tbody)return;
@@ -2319,7 +2522,7 @@ function renderRefEqTable(){
   </tr>`).join('');
 }
 function viewRefEq(id){
-  const r=LS.get(REF_KEY,[]).find(x=>x.id===id); if(!r)return;
+  const r=_refEq.find(x=>x.id===id); if(!r)return;
   const st=getRefStatus(r.dueDate);
   const SB2={Current:'badge-green','Due Soon':'badge-amber',Overdue:'badge-red',Unknown:'badge-slate'};
   const row=(l,v)=>`<tr><td style="color:var(--text-muted);padding:4px 0;width:150px;font-size:12px;">${l}</td><td style="padding:4px 0;font-size:13px;font-weight:500;">${v||'—'}</td></tr>`;
@@ -2333,9 +2536,10 @@ function viewRefEq(id){
   el('del-ref-eq-btn').onclick=()=>{closeModal('modal-view-ref-eq');deleteRefEq(id);};
   openModal('modal-view-ref-eq');
 }
-function deleteRefEq(id){
+async function deleteRefEq(id){
   if(!confirm('Delete this reference equipment record?'))return;
-  LS.set(REF_KEY,LS.get(REF_KEY,[]).filter(r=>r.id!==id));
+  await SB.delete('wl_ref_equipment',id);
+  _refEq=_refEq.filter(r=>r.id!==id);
   renderRefEqTable();
   addAudit('🗑',`Reference equipment <strong>${id}</strong> deleted`);
 }
@@ -2343,7 +2547,7 @@ function deleteRefEq(id){
 // ── VIEW COMPLETED CERTIFICATE ──
 function showCertFromJob(jobNo){
   const j=getJob(jobNo); if(!j||!j.calData)return;
-  const s=LS.get(SK,DEF);
+  const s=_settings;
   // Stamp approved_by if available
   const cd={...j.calData};
   if(j.approvedBy&&!cd.approved_by) cd.approved_by=USERS[j.approvedBy]?.name||j.approvedBy;
@@ -2357,9 +2561,211 @@ function showCertPreviewDirect(jobNo){
   showCertFromJob(jobNo);
 }
 
+// ── CUSTOMER DATABASE ──
+let _customers=[];
+const CUST_TABLE='wl_customers';
+
+async function loadCustomers(){
+  _customers=await SB.getAll(CUST_TABLE)||[];
+}
+
+function openAddCustomerModal(){
+  document.getElementById('customer-modal-title').textContent='🏢 Add Customer';
+  document.getElementById('cust-edit-id').value='';
+  ['cust-company','cust-attention','cust-address','cust-tel','cust-mobile','cust-fax','cust-email','cust-notes'].forEach(id=>{
+    const e=el(id); if(e) e.value='';
+  });
+  openModal('modal-add-customer');
+}
+
+function openEditCustomerModal(custId){
+  const c=_customers.find(x=>x.id===custId); if(!c)return;
+  document.getElementById('customer-modal-title').textContent='✏️ Edit Customer';
+  document.getElementById('cust-edit-id').value=custId;
+  el('cust-company').value=c.company||'';
+  el('cust-attention').value=c.attention||'';
+  el('cust-address').value=c.address||'';
+  el('cust-tel').value=c.tel||'';
+  el('cust-mobile').value=c.mobile||'';
+  el('cust-fax').value=c.fax||'';
+  el('cust-email').value=c.email||'';
+  el('cust-notes').value=c.notes||'';
+  openModal('modal-add-customer');
+}
+
+async function saveCustomer(){
+  const company=el('cust-company').value.trim();
+  if(!company){alert('Company name is required.');return;}
+  const editId=document.getElementById('cust-edit-id').value;
+  const custId=editId||('CUST-'+Date.now());
+  const record={
+    id:custId,
+    company,
+    attention:el('cust-attention').value.trim(),
+    address:el('cust-address').value.trim(),
+    tel:el('cust-tel').value.trim(),
+    mobile:el('cust-mobile').value.trim(),
+    fax:el('cust-fax').value.trim(),
+    email:el('cust-email').value.trim(),
+    notes:el('cust-notes').value.trim(),
+    createdAt:editId?(_customers.find(x=>x.id===editId)?.createdAt||new Date().toISOString()):new Date().toISOString()
+  };
+  await SB.upsert(CUST_TABLE,custId,record);
+  if(editId){
+    const idx=_customers.findIndex(x=>x.id===editId);
+    if(idx>=0)_customers[idx]=record; else _customers.push(record);
+  } else {
+    _customers.unshift(record);
+  }
+  closeModal('modal-add-customer');
+  renderCustomerTable();
+  addAudit('🏢',`Customer <strong>${company}</strong> ${editId?'updated':'added'}`);
+}
+
+async function deleteCustomer(custId){
+  const c=_customers.find(x=>x.id===custId);
+  if(!confirm(`Delete customer "${c?.company}"? This cannot be undone.`))return;
+  await SB.delete(CUST_TABLE,custId);
+  _customers=_customers.filter(x=>x.id!==custId);
+  renderCustomerTable();
+  addAudit('🗑',`Customer <strong>${c?.company}</strong> deleted`);
+}
+
+function renderCustomerTable(){
+  const q=(el('cust-search')?.value||'').toLowerCase();
+  const tbody=el('customer-tbody'); if(!tbody)return;
+  const filtered=_customers.filter(c=>
+    !q||(c.company||'').toLowerCase().includes(q)||
+    (c.attention||'').toLowerCase().includes(q)||
+    (c.email||'').toLowerCase().includes(q)
+  );
+  el('cust-kpi-total').textContent=_customers.length;
+  el('cust-kpi-jobs').textContent=_jobs.length;
+  el('cust-sub').textContent=`${_customers.length} registered customers`;
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🏢</div><p>${_customers.length?'No matching customers.':'No customers yet. Click "+ Add Customer" to add.'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=filtered.map(c=>{
+    const jobCount=_jobs.filter(j=>j.company===c.company).length;
+    return `<tr>
+      <td><strong>${c.company}</strong></td>
+      <td>${c.attention||'—'}</td>
+      <td>${c.tel||'—'}</td>
+      <td>${c.mobile||'—'}</td>
+      <td>${c.email||'—'}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.address||'—'}</td>
+      <td><span class="badge badge-blue">${jobCount} job${jobCount!==1?'s':''}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-outline btn-sm" onclick="openEditCustomerModal('${c.id}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteCustomer('${c.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CUSTOMER AUTOCOMPLETE (in New Job modal) ──
+let _custSuggestIdx=-1;
+let _custSelected=false;
+
+function customerSearchInput(val){
+  _custSelected=false;
+  hideCustBadge();
+  const box=el('customer-suggestions');
+  if(!val.trim()){box.style.display='none';return;}
+  const q=val.toLowerCase();
+  const matches=_customers.filter(c=>(c.company||'').toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){
+    box.innerHTML=`<div class="cust-suggestion"><span class="cust-new">➕ Add "${val}" as new customer</span></div>`;
+    box.querySelector('.cust-suggestion').onclick=()=>{ prefillNewCustomerModal(val); };
+  } else {
+    box.innerHTML=matches.map((c,i)=>`
+      <div class="cust-suggestion" data-idx="${i}">
+        <div class="cust-name">${c.company}</div>
+        <div class="cust-detail">${[c.attention,c.tel,c.email].filter(Boolean).join(' · ')||'No additional info'}</div>
+      </div>`).join('')+
+      `<div class="cust-suggestion" style="border-top:2px solid var(--border);"><span class="cust-new">➕ Add "${val}" as new customer</span></div>`;
+    matches.forEach((c,i)=>{
+      box.querySelectorAll('.cust-suggestion')[i].onclick=()=>selectCustomer(c);
+    });
+    box.querySelector('.cust-suggestion:last-child').onclick=()=>prefillNewCustomerModal(val);
+  }
+  _custSuggestIdx=-1;
+  box.style.display='block';
+}
+
+function customerSearchKeydown(e){
+  const box=el('customer-suggestions');
+  if(box.style.display==='none')return;
+  const items=box.querySelectorAll('.cust-suggestion');
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    _custSuggestIdx=Math.min(_custSuggestIdx+1,items.length-1);
+    items.forEach((it,i)=>it.classList.toggle('active',i===_custSuggestIdx));
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    _custSuggestIdx=Math.max(_custSuggestIdx-1,0);
+    items.forEach((it,i)=>it.classList.toggle('active',i===_custSuggestIdx));
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(_custSuggestIdx>=0&&items[_custSuggestIdx]) items[_custSuggestIdx].click();
+  } else if(e.key==='Escape'){
+    box.style.display='none';
+  }
+}
+
+function selectCustomer(c){
+  // Fill all fields from customer record
+  el('eq-company').value=c.company||'';
+  el('eq-attention').value=c.attention||'';
+  el('eq-address').value=c.address||'';
+  el('eq-tel').value=c.tel||'';
+  el('eq-mobile').value=c.mobile||'';
+  el('eq-fax').value=c.fax||'';
+  el('eq-email').value=c.email||'';
+  el('customer-suggestions').style.display='none';
+  // Show success badge
+  const badge=el('customer-selected-badge');
+  const name=el('customer-selected-name');
+  if(badge&&name){badge.style.display='flex';name.textContent=c.company;}
+  _custSelected=true;
+}
+
+function clearCustomerSelection(){
+  _custSelected=false;
+  ['eq-company','eq-attention','eq-address','eq-tel','eq-mobile','eq-fax','eq-email'].forEach(id=>{
+    const e=el(id); if(e)e.value='';
+  });
+  hideCustBadge();
+  el('eq-company').focus();
+}
+
+function hideCustBadge(){
+  const badge=el('customer-selected-badge');
+  if(badge) badge.style.display='none';
+}
+
+function prefillNewCustomerModal(name){
+  el('customer-suggestions').style.display='none';
+  el('cust-company').value=name;
+  document.getElementById('customer-modal-title').textContent='🏢 Add Customer';
+  document.getElementById('cust-edit-id').value='';
+  ['cust-attention','cust-address','cust-tel','cust-mobile','cust-fax','cust-email','cust-notes'].forEach(id=>{
+    const e=el(id); if(e) e.value='';
+  });
+  openModal('modal-add-customer');
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#eq-company')&&!e.target.closest('#customer-suggestions')){
+    const box=el('customer-suggestions');
+    if(box) box.style.display='none';
+  }
+});
+
 // ── INIT ──
 el('dash-date').textContent='Week of '+new Date().toLocaleDateString('en-MY',{day:'numeric',month:'long',year:'numeric'});
-renderDashboard();
 </script>
 <!-- SIDEBAR OVERLAY (mobile) -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
