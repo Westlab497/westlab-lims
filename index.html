@@ -344,9 +344,6 @@ textarea.form-control{resize:vertical;min-height:70px;}
   .approval-card-actions{flex-direction:column;}
   .approval-card-actions .btn{width:100%;justify-content:center;}
 
-  /* Login box */
-  .login-box{padding:32px 22px;border-radius:12px;}
-
   /* Photo grid */
   .photo-preview-grid{grid-template-columns:repeat(3,1fr);}
 
@@ -383,7 +380,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 <body>
 
 <!-- ══ LOGIN ══ -->
-<div id="login-screen">
+<div id="login-screen" class="hidden">
   <div class="login-box">
     <div class="login-logo">
       <div class="logo-badge">ISO 17025</div>
@@ -391,7 +388,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <p>Calibration &amp; Testing Management System</p>
     </div>
     <hr class="login-divider"/>
-    <div class="login-error" id="login-error">Incorrect username or password.</div>
+    <div class="login-error" id="login-error">Incorrect username or password. Please try again.</div>
     <div class="form-group">
       <label class="form-label">Username</label>
       <input class="form-control" id="login-username" placeholder="Enter username" autocomplete="username"/>
@@ -400,7 +397,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <label class="form-label">Password</label>
       <input class="form-control" id="login-password" type="password" placeholder="Enter password" autocomplete="current-password"/>
     </div>
-    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px;margin-top:6px;" onclick="doLogin()">Sign In →</button>
+    <button class="btn btn-primary" id="login-btn" style="width:100%;padding:11px;font-size:14px;margin-top:6px;" onclick="doLogin()">Sign In →</button>
     <div class="login-footer">
       <strong>admin</strong> / westlab123 &nbsp;·&nbsp;
       <strong>jay</strong> / jay123 &nbsp;·&nbsp;
@@ -434,7 +431,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
     <button class="nav-item" id="nav-personnel" onclick="showView('personnel')"><span class="nav-icon">👥</span> Personnel</button>
     <button class="nav-item" id="nav-reports" onclick="showView('reports')"><span class="nav-icon">📈</span> Reports &amp; Audit Logs</button>
     <button class="nav-item" id="nav-settings" onclick="showView('settings')"><span class="nav-icon">⚙️</span> Settings</button>
-    <button class="nav-item" onclick="doLogout()" style="margin-top:8px;"><span class="nav-icon">🚪</span> Logout</button>
+    <button class="nav-item" onclick="doLogout()" style="margin-top:8px;color:rgba(255,100,100,.8);"><span class="nav-icon">🚪</span> Logout</button>
   </div>
   <div class="sidebar-footer">
     <strong id="sidebar-lab-label">Westlab</strong>
@@ -1381,8 +1378,8 @@ const DEF={labName:'Westlab',accredNum:'WL-2024-0001',accredBody:'ILAC / A2LA',
   techManager:'Lab Manager',address:'123 Lab Street, Kuala Lumpur, Malaysia',
   email:'lab@westlab.com',username:'admin',password:'westlab123'};
 
-// In-memory cache (refreshed from Supabase on load / after changes)
-let _jobs=[], _refEq=[], _settings=Object.assign({},DEF);
+// In-memory cache
+let _jobs=[], _refEq=[], _settings=Object.assign({},DEF), _customers=[];
 
 async function loadAll(){
   showLoadingOverlay(true);
@@ -1416,80 +1413,89 @@ function showLoadingOverlay(show){
 
 // ── USERS ──
 const USERS={
-  admin:{name:'Administrator',role:'Admin',display:'Administrator',avatarClass:''},
-  jay:{name:'Jay',role:'Approver',display:'Senior Technician & Approver',avatarClass:'jay',password:'jay123'},
-  edmund:{name:'Edmund',role:'Technician',display:'Calibration Technician',avatarClass:'edmund',password:'edmund123'}
+  admin:{name:'Administrator',display:'Administrator',avatarClass:'',password:'westlab123'},
+  jay:{name:'Jay',display:'Senior Technician & Approver',avatarClass:'jay',password:'jay123'},
+  edmund:{name:'Edmund',display:'Calibration Technician',avatarClass:'edmund',password:'edmund123'}
 };
 
-let currentUser=null; // set on login
+let currentUser=null;
 
-// ── LOGIN / LOGOUT ──
+// ── LOGIN ──
 function doLogin(){
-  if(!_appReady){alert('Please wait — connecting to database…');return;}
-  const s=_settings;
   const u=document.getElementById('login-username').value.trim().toLowerCase();
   const p=document.getElementById('login-password').value;
   const err=document.getElementById('login-error');
-  if(u===(s.username||'admin') && p===(s.password||'westlab123')){
-    setCurrentUser('admin'); return;
-  }
-  if(USERS[u] && USERS[u].password && p===USERS[u].password){
-    setCurrentUser(u); return;
-  }
+  err.style.display='none';
+  // Check against USERS (admin password may be overridden in _settings)
+  const adminPass=(_settings&&_settings.password)||USERS.admin.password;
+  const adminUser=(_settings&&_settings.username)||'admin';
+  if(u===adminUser.toLowerCase()&&p===adminPass){setCurrentUser('admin');return;}
+  if(u==='jay'&&p===USERS.jay.password){setCurrentUser('jay');return;}
+  if(u==='edmund'&&p===USERS.edmund.password){setCurrentUser('edmund');return;}
   err.style.display='block';
   document.getElementById('login-password').value='';
 }
+
 function setCurrentUser(username){
   currentUser=username;
-  LS.set(SESS,{user:username,time:Date.now()});
+  // Hide login screen
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('login-error').style.display='none';
-  const u=USERS[username]||{name:username,display:'Admin',avatarClass:''};
-  document.getElementById('topbar-username').textContent=u.name;
-  document.getElementById('topbar-role').textContent=u.display;
-  const av=document.getElementById('topbar-avatar');
-  av.textContent=u.name.slice(0,2).toUpperCase();
-  av.className='avatar '+(u.avatarClass||'');
+  // Update topbar
+  const u=USERS[username]||{name:username,display:'User',avatarClass:''};
+  const av=el('topbar-avatar');
+  if(av){av.textContent=u.name.slice(0,2).toUpperCase();av.className='avatar '+(u.avatarClass||'');}
+  const tu=el('topbar-username');if(tu)tu.textContent=u.name;
+  const tr=el('topbar-role');if(tr)tr.textContent=u.display;
+  // Save session
+  try{localStorage.setItem('wl_sess',JSON.stringify({user:username,time:Date.now()}));}catch(e){}
+  // Apply UI
   applyRoleUI();
   applySettings(_settings);
   renderEquipmentTable();
   renderRefEqTable();
-  renderCustomerTable();
   renderDashboard();
   refreshAllBadges();
-  addAudit('🔑',`<strong>${u.name}</strong> logged in`);
 }
+
 function doLogout(){
-  currentUser=null; LS.set(SESS,null);
+  currentUser=null;
+  try{localStorage.removeItem('wl_sess');}catch(e){}
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-username').value='';
   document.getElementById('login-password').value='';
+  document.getElementById('login-error').style.display='none';
 }
+
+// Enter key support
 ['login-password','login-username'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 });
 
-// ── STARTUP: load settings first, then allow login ──
-let _appReady=false;
+// ── STARTUP ──
 (async function(){
-  // Disable login button while loading
-  const loginBtn=document.querySelector('#login-screen .btn-primary');
-  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Connecting…';}
+  // Show loading overlay
+  showLoadingOverlay(true);
   try{
     await loadAll();
     applySettings(_settings);
   }catch(e){
     console.error('Startup error:',e);
-  } finally {
-    // ALWAYS re-enable login, even if Supabase fails
-    _appReady=true;
-    if(loginBtn){loginBtn.disabled=false;loginBtn.textContent='Sign In →';}
+  }finally{
+    showLoadingOverlay(false);
   }
-  // Auto-restore session if still valid
-  const s=LS.get(SESS,null);
-  if(s&&s.user&&(Date.now()-s.time<8*3600*1000)){
-    setCurrentUser(s.user);
-  }
+  // Update login page lab name
+  const ln=el('login-lab-name');
+  if(ln) ln.textContent=_settings.labName||'Westlab';
+  // Try restore session
+  try{
+    const sess=JSON.parse(localStorage.getItem('wl_sess')||'null');
+    if(sess&&sess.user&&(Date.now()-sess.time<8*3600*1000)){
+      setCurrentUser(sess.user); return;
+    }
+  }catch(e){}
+  // Show login screen
+  document.getElementById('login-screen').classList.remove('hidden');
 })();
 
 // ── ROLE-BASED UI ──
@@ -1498,19 +1504,17 @@ function applyRoleUI(){
   const isJay=currentUser==='jay';
   const isEdmund=currentUser==='edmund';
   const isTech=isJay||isEdmund;
-
-  // Sidebar nav visibility
-  el('nav-equipment').classList.toggle('hidden-nav', isTech && !isJay);
-  // Admin equipment view shows to admin + jay (jay sees all)
-  el('nav-equipment').classList.toggle('hidden-nav', isEdmund);
-  el('nav-my-jobs').classList.toggle('hidden-nav', !isTech);
-  el('nav-approval').classList.toggle('hidden-nav', !isJay);
+  // Sidebar
+  el('nav-equipment').classList.toggle('hidden-nav',isEdmund);
+  el('nav-customers').classList.toggle('hidden-nav',false);
+  el('nav-ref-eq').classList.toggle('hidden-nav',false);
+  el('nav-my-jobs').classList.toggle('hidden-nav',!isTech);
+  el('nav-approval').classList.toggle('hidden-nav',!isJay);
   el('nav-admin-section').style.display=isAdmin?'':'none';
   el('nav-personnel').classList.toggle('hidden-nav',!isAdmin);
   el('nav-reports').classList.toggle('hidden-nav',!isAdmin);
   el('nav-settings').classList.toggle('hidden-nav',!isAdmin);
-
-  // New job button only for admin
+  // Dashboard
   el('btn-new-job').style.display=isAdmin?'':'none';
   el('dash-admin-btns').style.display=isAdmin?'flex':'none';
 }
@@ -1942,7 +1946,7 @@ async function rejectJob(){
 
 // ── RENDER EQUIPMENT TABLE (Admin / Jay) ──
 const PB={Urgent:'badge-red',Express:'badge-amber',Normal:'badge-blue',Routine:'badge-slate'};
-const SB={Unassigned:'badge-amber',Assigned:'badge-blue','In Progress':'badge-blue','Pending Approval':'badge-purple',Completed:'badge-green'};
+const STATUS_BADGE={Unassigned:'badge-amber',Assigned:'badge-blue','In Progress':'badge-blue','Pending Approval':'badge-purple',Completed:'badge-green'};
 
 function renderEquipmentTable(){
   const list=_jobs;
@@ -1976,7 +1980,7 @@ function renderEquipmentTable(){
         <td><span class="badge ${PB[j.priority]||'badge-slate'}">${j.priority}</span></td>
         <td>${j.receiveDate||'—'}</td>
         <td>${assignedName}</td>
-        <td><span class="badge ${SB[j.status]||'badge-slate'}">${j.status}</span></td>
+        <td><span class="badge ${STATUS_BADGE[j.status]||'badge-slate'}">${j.status}</span></td>
         <td style="white-space:nowrap;">${actions}</td>
       </tr>`;
     }).join('');
@@ -2005,7 +2009,7 @@ function renderMyJobs(){
     <div class="approval-card ${j.priority==='Urgent'||j.priority==='Express'?'urgent':''}">
       <div class="approval-card-header">
         <span class="approval-card-title">${j.jobNo} — ${j.eqName}</span>
-        <span class="badge ${SB[j.status]||'badge-slate'}">${j.status}</span>
+        <span class="badge ${STATUS_BADGE[j.status]||'badge-slate'}">${j.status}</span>
       </div>
       <div class="approval-card-meta">
         Customer: <strong>${j.custName}</strong> &nbsp;·&nbsp; ${j.company||''} &nbsp;·&nbsp;
@@ -2102,7 +2106,7 @@ function viewJobDetail(jobNo){
           ${r('Equipment',j.eqName)}${r('Brand',j.brand)}${r('Model',j.model)}
           ${r('Serial No.',j.serial)}${r('Range',j.range)}${r('Cal Points',j.calPoints)}
           ${r('Specification',j.spec)}${r('Condition',j.condition)}${r('Accessories',j.accessories)}
-          ${r('Status','<span class="badge '+(SB[j.status]||'badge-slate')+'">'+j.status+'</span>')}
+          ${r('Status','<span class="badge '+(STATUS_BADGE[j.status]||'badge-slate')+'">'+j.status+'</span>')}
           ${r('Assigned To',j.assignedTo?USERS[j.assignedTo]?.name||j.assignedTo:'Unassigned')}
         </table>
       </div>
@@ -2214,41 +2218,24 @@ function syncBottomNav(viewName){
   if(target){const t=document.getElementById(target);if(t)t.classList.add('active');}
 }
 function applyBottomNavRoles(){
-  const isAdmin=currentUser==='admin';
-  const isJay=currentUser==='jay';
-  const isEdmund=currentUser==='edmund';
-  const isTech=isJay||isEdmund;
-  const beq=document.getElementById('bnav-equipment');
+  // Login removed — show only main items
   const bmj=document.getElementById('bnav-my-jobs');
   const bap=document.getElementById('bnav-approval');
-  if(beq) beq.style.display=isEdmund?'none':'flex';
-  if(bmj) bmj.style.display=isTech?'flex':'none';
-  if(bap) bap.style.display=isJay?'flex':'none';
+  if(bmj) bmj.style.display='none';
+  if(bap) bap.style.display='none';
 }
 function updateBottomNavBadges(){
-  const list=_jobs;
-  const myCount=currentUser?list.filter(j=>j.assignedTo===currentUser&&j.status!=='Completed'&&j.status!=='Pending Approval').length:0;
-  const approvalCount=list.filter(j=>j.status==='Pending Approval').length;
-  const bm=document.getElementById('bnav-my-badge');
+  const approvalCount=_jobs.filter(j=>j.status==='Pending Approval').length;
   const ba=document.getElementById('bnav-approval-badge');
-  if(bm){bm.textContent=myCount;bm.style.display=myCount>0?'inline':'none';}
   if(ba){ba.textContent=approvalCount;ba.style.display=approvalCount>0?'inline':'none';}
 }
 
-// Patch showView to also sync bottom nav and close sidebar on mobile
+// Patch showView to sync bottom nav and close sidebar on mobile
 const _origShowView=showView;
 showView=function(name){
   _origShowView(name);
   syncBottomNav(name);
   if(window.innerWidth<=768) closeSidebar();
-};
-
-// Patch setCurrentUser to also apply bottom nav roles
-const _origSetCurrentUser=setCurrentUser;
-setCurrentUser=function(username){
-  _origSetCurrentUser(username);
-  applyBottomNavRoles();
-  updateBottomNavBadges();
 };
 
 // Patch refreshAllBadges to also update bottom nav badges
@@ -2579,12 +2566,7 @@ function showCertPreviewDirect(jobNo){
 }
 
 // ── CUSTOMER DATABASE ──
-let _customers=[];
 const CUST_TABLE='wl_customers';
-
-async function loadCustomers(){
-  _customers=await SB.getAll(CUST_TABLE)||[];
-}
 
 function openAddCustomerModal(){
   document.getElementById('customer-modal-title').textContent='🏢 Add Customer';
