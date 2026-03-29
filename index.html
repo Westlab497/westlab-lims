@@ -799,7 +799,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <div class="form-section-title">👤 Customer Information</div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Job Number</label><input class="form-control" id="eq-job-no" readonly/></div>
-        <div class="form-group"><label class="form-label">Certificate Number</label><input class="form-control" id="eq-cert-no-preview" readonly style="font-family:'DM Mono',monospace;font-weight:700;color:var(--blue);"/></div>
+        <div class="form-group"><label class="form-label">Certificate Number</label><input class="form-control" id="eq-cert-no-preview" readonly style="font-family:'DM Sans',sans-serif;font-weight:700;color:var(--blue);"/></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Receiving Date <span class="req">*</span></label><input class="form-control" id="eq-receive-date" type="date"/></div>
@@ -982,7 +982,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <!-- SECTION 1: Certificate Header -->
       <div class="form-section-title">📄 Certificate Details</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Certificate Number <span class="req">*</span></label><input class="form-control" id="cal-cert-no" placeholder="Auto-generated e.g. WLCS260300001" readonly style="background:#f1f5f9;font-family:'DM Mono',monospace;font-weight:700;color:var(--navy);"/></div>
+        <div class="form-group"><label class="form-label">Certificate Number <span class="req">*</span></label><input class="form-control" id="cal-cert-no" placeholder="Auto-generated e.g. WLCS260300001" readonly style="background:#f1f5f9;font-family:'DM Sans',sans-serif;font-weight:700;color:var(--navy);"/></div>
         <div class="form-group"><label class="form-label">Page</label><input class="form-control" id="cal-page" placeholder="e.g. 1 of 3"/></div>
       </div>
       <div class="form-row">
@@ -2028,7 +2028,7 @@ function renderEquipmentTable(){
         actions+=` <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.jobNo}')" title="Delete Job">🗑</button>`;
       return `<tr>
         <td><span style="font-family:'DM Mono';font-size:12px;font-weight:600;">${j.jobNo}</span></td>
-      <td><span style="font-family:'DM Mono';font-size:11px;color:var(--blue);">${j.certNo||'—'}</span></td>
+      <td><span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--blue);">${j.certNo||'—'}</span></td>
         <td>${j.custName}<br/><span style="font-size:11px;color:var(--text-muted);">${j.attention||''}</span></td>
         <td>${j.eqName}<br/><span style="font-size:11px;color:var(--text-muted);">${[j.brand,j.model].filter(Boolean).join(' / ')||''}</span></td>
         <td><span class="badge ${PB[j.priority]||'badge-slate'}">${j.priority}</span></td>
