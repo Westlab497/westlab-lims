@@ -1422,6 +1422,7 @@ let currentUser=null; // set on login
 
 // ── LOGIN / LOGOUT ──
 function doLogin(){
+  if(!_appReady){alert('Please wait — connecting to database…');return;}
   const s=_settings;
   const u=document.getElementById('login-username').value.trim().toLowerCase();
   const p=document.getElementById('login-password').value;
@@ -1448,12 +1449,11 @@ function setCurrentUser(username){
   av.className='avatar '+(u.avatarClass||'');
   applyRoleUI();
   applySettings(_settings);
-  loadAll().then(()=>{
-    renderEquipmentTable();
-    renderRefEqTable();
-    renderDashboard();
-    refreshAllBadges();
-  });
+  renderEquipmentTable();
+  renderRefEqTable();
+  renderCustomerTable();
+  renderDashboard();
+  refreshAllBadges();
   addAudit('🔑',`<strong>${u.name}</strong> logged in`);
 }
 function doLogout(){
@@ -1465,10 +1465,19 @@ function doLogout(){
 ['login-password','login-username'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 });
-// restore session
+
+// ── STARTUP: load settings first, then allow login ──
+let _appReady=false;
 (async function(){
+  // Show loading state on login button
+  const loginBtn=document.querySelector('#login-screen .btn-primary');
+  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Loading…';}
   await loadAll();
   applySettings(_settings);
+  _appReady=true;
+  // Restore login button
+  if(loginBtn){loginBtn.disabled=false;loginBtn.textContent='Sign In →';}
+  // Auto-restore session if still valid
   const s=LS.get(SESS,null);
   if(s&&s.user&&(Date.now()-s.time<8*3600*1000)){
     setCurrentUser(s.user);
