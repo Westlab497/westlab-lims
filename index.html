@@ -546,11 +546,11 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Job No.</th><th>Customer</th><th>Equipment</th><th>Priority</th>
+              <th>Job No.</th><th>Cert No.</th><th>Customer</th><th>Equipment</th><th>Priority</th>
               <th>Received</th><th>Assigned To</th><th>Status</th><th>Actions</th>
             </tr></thead>
             <tbody id="equipment-tbody">
-              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📋</div><p>No jobs yet. Click "+ New Job" to add.</p></div></td></tr>
+              <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><p>No jobs yet. Click "+ New Job" to add.</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -799,6 +799,9 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <div class="form-section-title">👤 Customer Information</div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Job Number</label><input class="form-control" id="eq-job-no" readonly/></div>
+        <div class="form-group"><label class="form-label">Certificate Number</label><input class="form-control" id="eq-cert-no-preview" readonly style="font-family:'DM Mono',monospace;font-weight:700;color:var(--blue);"/></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Receiving Date <span class="req">*</span></label><input class="form-control" id="eq-receive-date" type="date"/></div>
       </div>
 
@@ -979,7 +982,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <!-- SECTION 1: Certificate Header -->
       <div class="form-section-title">📄 Certificate Details</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Certificate Number <span class="req">*</span></label><input class="form-control" id="cal-cert-no" placeholder="e.g. CLQI018"/></div>
+        <div class="form-group"><label class="form-label">Certificate Number <span class="req">*</span></label><input class="form-control" id="cal-cert-no" placeholder="Auto-generated e.g. WLCS260300001" readonly style="background:#f1f5f9;font-family:'DM Mono',monospace;font-weight:700;color:var(--navy);"/></div>
         <div class="form-group"><label class="form-label">Page</label><input class="form-control" id="cal-page" placeholder="e.g. 1 of 3"/></div>
       </div>
       <div class="form-row">
@@ -1356,13 +1359,33 @@ const SB={
     return d&&d[0]?d[0].val:0;
   },
   async incSeq(){
-    // Read then write (atomic enough for small team)
     const cur=await this.getSeq();
     const next=cur+1;
     await fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.job_seq`,{
       method:'PATCH',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({val:next})
+    });
+    return next;
+  },
+  // ── CERT SEQUENCE (resets each year) ──
+  async getCertSeq(yearKey){
+    // yearKey format: "26" (2-digit year)
+    const id='cert_seq_'+yearKey;
+    const r=await fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.${id}&select=val`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const d=await r.json();
+    return d&&d[0]?d[0].val:0;
+  },
+  async incCertSeq(yearKey){
+    const id='cert_seq_'+yearKey;
+    const cur=await this.getCertSeq(yearKey);
+    const next=cur+1;
+    await fetch(`${SUPA_URL}/rest/v1/wl_sequences`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id,val:next})
     });
     return next;
   }
@@ -1595,6 +1618,27 @@ async function commitJobNo(){
   return 'WL'+yr+'-'+String(seq).padStart(5,'0');
 }
 
+// ── CERT NUMBER — format: WLCS260300001 ──
+// WL=Westlab, C=Calibration, S=Selangor, YY=year, MM=month (display only), 00001=running (resets each year)
+function getCertYearKey(){
+  return new Date().getFullYear().toString().slice(-2);
+}
+function getCertMonthStr(){
+  return String(new Date().getMonth()+1).padStart(2,'0');
+}
+async function peekCertNo(){
+  const yk=getCertYearKey();
+  const mm=getCertMonthStr();
+  const seq=await SB.getCertSeq(yk);
+  return 'WLCS'+yk+mm+String(seq+1).padStart(5,'0');
+}
+async function commitCertNo(){
+  const yk=getCertYearKey();
+  const mm=getCertMonthStr();
+  const seq=await SB.incCertSeq(yk);
+  return 'WLCS'+yk+mm+String(seq).padStart(5,'0');
+}
+
 // ── PHOTO UPLOAD ──
 let currentPhotos=[];
 function handlePhotoSelect(e){Array.from(e.target.files).forEach(f=>readPhoto(f));e.target.value='';}
@@ -1642,7 +1686,9 @@ async function openNewJobModal(){
   if(currentUser!=='admin'){alert('Only admin can create new jobs.');return;}
   currentPhotos=[]; renderPhotoPreviews();
   el('eq-job-no').value='Generating…';
+  el('eq-cert-no-preview').value='Generating…';
   el('eq-job-no').value=await peekJobNo();
+  el('eq-cert-no-preview').value=await peekCertNo();
   el('eq-receive-date').value=new Date().toISOString().split('T')[0];
   el('eq-condition').value='Good'; el('eq-priority').value='Normal';
   el('eq-condition-other-group').style.display='none';
@@ -1670,8 +1716,10 @@ async function saveEquipment(){
   const condOther=el('eq-condition-other').value.trim();
   if(cond==='Others'&&!condOther){alert('Please specify the item condition.');return;}
   const jobNo=await commitJobNo();
+  const certNo=await commitCertNo(); // ← assign cert number at job creation
   const job={
     jobNo,
+    certNo, // stored on the job from day 1
     receiveDate:el('eq-receive-date').value,
     custName:company, company,
     attention:el('eq-attention').value.trim(),
@@ -1687,13 +1735,13 @@ async function saveEquipment(){
     photos:[...currentPhotos],
     status:'Unassigned', assignedTo:null, assignNote:'',
     calData:null, excelFile:null, approvalComments:'',
-    history:[{action:'Job Created',by:'admin',time:new Date().toISOString()}]
+    history:[{action:`Job Created — Cert No. ${certNo}`,by:'admin',time:new Date().toISOString()}]
   };
   await SB.upsert('wl_jobs',jobNo,job);
   _jobs.unshift(job);
   closeModal('modal-add-equipment');
   renderEquipmentTable(); renderDashboard(); refreshAllBadges();
-  addAudit('🔧',`Job <strong>${jobNo}</strong> created for ${company}`);
+  addAudit('🔧',`Job <strong>${jobNo}</strong> · Cert <strong>${certNo}</strong> created for ${company}`);
   currentPhotos=[];
   // Offer to save customer to database if not already there
   if(!_custSelected && !_customers.find(c=>c.company.toLowerCase()===company.toLowerCase())){
@@ -1763,7 +1811,7 @@ async function confirmReassign(){
 
 // ── CALIBRATION ──
 let calJobNo=null;
-function openCalModal(jobNo){
+async function openCalModal(jobNo){
   calJobNo=jobNo; currentExcel=null;
   el('excel-attached').style.display='none';
   el('excel-drop-zone').style.display='block';
@@ -1804,7 +1852,7 @@ function openCalModal(jobNo){
   // Reset traceability rows
   const tr=el('trace-rows');
   if(tr){ const rows=tr.querySelectorAll('.trace-row'); rows.forEach((r,i)=>{r.querySelectorAll('input').forEach(inp=>inp.value='');}); }
-  // Pre-fill if re-submitting after rejection
+  // Pre-fill if re-submitting after rejection (keep existing cert no)
   if(j&&j.calData){
     const cd=j.calData;
     ['cert-no','page','issue-date','date','receipt-date','tag-no','resolution','next-due',
@@ -1813,6 +1861,9 @@ function openCalModal(jobNo){
       const e=el('cal-'+k); if(e&&cd[k.replace(/-/g,'_')]!==undefined) e.value=cd[k.replace(/-/g,'_')]||'';
     });
     el('cal-result').value=cd.result||'';
+  } else {
+    // New submission — use cert number assigned at job creation
+    el('cal-cert-no').value=j&&j.certNo?j.certNo:'';
   }
   openModal('modal-perform-cal');
 }
@@ -1844,8 +1895,10 @@ async function submitCalibration(){
   const result=el('cal-result').value;
   if(!result){alert('Please select a calibration result.');return;}
   if(!currentExcel){alert('Please upload the calibration data file (Page 2 onwards) before submitting.');return;}
+  const j=getJob(calJobNo);
+  const certNo=j&&j.certNo?j.certNo:el('cal-cert-no').value.trim();
   const calData={
-    cert_no:el('cal-cert-no').value.trim(),
+    cert_no:certNo,
     page:el('cal-page').value.trim(),
     issue_date:el('cal-issue-date').value,
     date:el('cal-date').value,
@@ -1959,7 +2012,7 @@ function renderEquipmentTable(){
     return ms&&(!sf||j.status===sf);
   });
   if(!filtered.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📋</div><p>${list.length?'No matching records.':'No jobs yet.'}</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><p>${list.length?'No matching records.':'No jobs yet.'}</p></div></td></tr>`;
   } else {
     tbody.innerHTML=filtered.map(j=>{
       const assignedName=j.assignedTo?USERS[j.assignedTo]?.name||j.assignedTo:'—';
@@ -1975,6 +2028,7 @@ function renderEquipmentTable(){
         actions+=` <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.jobNo}')">🗑</button>`;
       return `<tr>
         <td><span style="font-family:'DM Mono';font-size:12px;font-weight:600;">${j.jobNo}</span></td>
+      <td><span style="font-family:'DM Mono';font-size:11px;color:var(--blue);">${j.certNo||'—'}</span></td>
         <td>${j.custName}<br/><span style="font-size:11px;color:var(--text-muted);">${j.attention||''}</span></td>
         <td>${j.eqName}<br/><span style="font-size:11px;color:var(--text-muted);">${[j.brand,j.model].filter(Boolean).join(' / ')||''}</span></td>
         <td><span class="badge ${PB[j.priority]||'badge-slate'}">${j.priority}</span></td>
