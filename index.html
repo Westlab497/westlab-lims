@@ -2024,8 +2024,8 @@ function renderEquipmentTable(){
       actions+=`<button class="btn btn-outline btn-sm" onclick="viewJobDetail('${j.jobNo}')">View</button>`;
       if(j.status==='Completed'&&j.calData)
         actions+=` <button class="btn btn-outline btn-sm" onclick="showCertFromJob('${j.jobNo}')" title="View Certificate">📄</button>`;
-      if(currentUser==='admin' && j.status==='Unassigned')
-        actions+=` <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.jobNo}')">🗑</button>`;
+      if(currentUser==='admin')
+        actions+=` <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.jobNo}')" title="Delete Job">🗑</button>`;
       return `<tr>
         <td><span style="font-family:'DM Mono';font-size:12px;font-weight:600;">${j.jobNo}</span></td>
       <td><span style="font-family:'DM Mono';font-size:11px;color:var(--blue);">${j.certNo||'—'}</span></td>
@@ -2185,11 +2185,15 @@ function viewJobDetail(jobNo){
 }
 
 async function deleteJob(jobNo){
-  if(!confirm(`Delete job ${jobNo}? This cannot be undone.`)) return;
+  const j=getJob(jobNo);
+  const warn=j&&j.status!=='Unassigned'
+    ? `⚠️ Job ${jobNo} is currently "${j.status}". Are you sure you want to permanently delete it? This cannot be undone.`
+    : `Delete job ${jobNo}? This cannot be undone.`;
+  if(!confirm(warn)) return;
   await SB.delete('wl_jobs',jobNo);
   _jobs=_jobs.filter(j=>j.jobNo!==jobNo);
   renderEquipmentTable(); renderDashboard(); refreshAllBadges();
-  addAudit('🗑',`Job <strong>${jobNo}</strong> deleted`);
+  addAudit('🗑',`Job <strong>${jobNo}</strong> deleted by admin`);
 }
 
 // ── UTILS ──
