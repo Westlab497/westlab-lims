@@ -231,6 +231,22 @@ textarea.form-control{resize:vertical;min-height:70px;}
 .approval-card-meta{font-size:12px;color:var(--text-muted);margin-bottom:10px;}
 .approval-card-actions{display:flex;gap:8px;margin-top:12px;}
 
+/* ── TRACEABILITY SEARCH ── */
+.trace-suggestion{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s;}
+.trace-suggestion:last-child{border-bottom:none;}
+.trace-suggestion:hover,.trace-suggestion.active{background:var(--blue-pale);}
+.trace-suggestion .ts-name{font-weight:700;color:var(--navy);}
+.trace-suggestion .ts-detail{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.trace-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;}
+.trace-card-info{font-size:12px;}
+.trace-card-name{font-weight:700;color:var(--navy);font-size:13px;margin-bottom:4px;}
+.trace-card-row{display:flex;gap:16px;flex-wrap:wrap;}
+.trace-card-field{color:var(--text-muted);}<br>
+.trace-card-field span{color:var(--text);font-weight:500;}
+.trace-card-status-overdue{color:var(--red);font-weight:700;}
+.trace-card-status-soon{color:var(--amber);font-weight:700;}
+.trace-card-status-ok{color:var(--green);font-weight:600;}
+
 /* ── CUSTOMER AUTOCOMPLETE ── */
 .cust-suggestion{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s;}
 .cust-suggestion:last-child{border-bottom:none;}
@@ -420,6 +436,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
     <div class="nav-section-label">Modules</div>
     <button class="nav-item" id="nav-equipment" onclick="showView('equipment')"><span class="nav-icon">🔧</span> Equipment &amp; Calibration</button>
+    <button class="nav-item" id="nav-completed" onclick="showView('completed')"><span class="nav-icon">✅</span> Completed Jobs</button>
     <button class="nav-item" id="nav-customers" onclick="showView('customers')"><span class="nav-icon">🏢</span> Customer Database</button>
     <button class="nav-item" id="nav-ref-eq" onclick="showView('ref-eq')"><span class="nav-icon">🏛️</span> Lab Reference Equipment</button>
     <button class="nav-item hidden-nav" id="nav-my-jobs" onclick="showView('my-jobs')"><span class="nav-icon">📋</span> My Jobs <span class="nav-badge" id="my-jobs-badge" style="display:none;">0</span></button>
@@ -639,6 +656,43 @@ textarea.form-control{resize:vertical;min-height:70px;}
       </div>
     </div>
 
+    <!-- ════ COMPLETED JOBS ════ -->
+    <div class="view" id="view-completed">
+      <div class="page-header">
+        <div>
+          <div class="page-title">✅ Completed Jobs</div>
+          <div class="page-sub" id="completed-sub">All approved & completed calibration jobs</div>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-mini"><div class="kpi-val" id="comp-kpi-total">0</div><div class="kpi-lbl">Total Completed</div></div>
+        <div class="kpi-mini"><div class="kpi-val" style="color:var(--amber)" id="comp-kpi-pending-billing">0</div><div class="kpi-lbl">Pending Billing</div></div>
+        <div class="kpi-mini"><div class="kpi-val" style="color:var(--green)" id="comp-kpi-billed">0</div><div class="kpi-lbl">Billed</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Completed Calibration Register</span>
+          <div style="display:flex;gap:8px;">
+            <select class="filter-select" id="comp-filter-billing" onchange="renderCompletedJobs()">
+              <option value="">All</option>
+              <option value="pending">Pending Billing</option>
+              <option value="billed">Billed</option>
+            </select>
+            <input id="comp-search" class="filter-select" placeholder="Search…" style="width:180px;" oninput="renderCompletedJobs()"/>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Job No.</th><th>Cert No.</th><th>Customer</th><th>Equipment</th>
+              <th>Cal Date</th><th>Approved By</th><th>Billing Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="completed-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ════ CUSTOMER DATABASE ════ -->
     <div class="view" id="view-customers">
       <div class="page-header">
@@ -678,12 +732,12 @@ textarea.form-control{resize:vertical;min-height:70px;}
           <div class="page-title">🏛️ Lab Reference Equipment</div>
           <div class="page-sub" id="ref-eq-sub">Westlab's own calibration reference instruments</div>
         </div>
-        <button class="btn btn-primary" onclick="openModal('modal-add-ref-eq')">+ Add Reference Equipment</button>
+        <button class="btn btn-primary" onclick="openAddRefEqModal()">+ Add Reference Equipment</button>
       </div>
       <div class="kpi-row">
         <div class="kpi-mini"><div class="kpi-val" id="ref-kpi-total">0</div><div class="kpi-lbl">Total Instruments</div></div>
         <div class="kpi-mini"><div class="kpi-val" style="color:var(--red)" id="ref-kpi-overdue">0</div><div class="kpi-lbl">Overdue</div></div>
-        <div class="kpi-mini"><div class="kpi-val" style="color:var(--amber)" id="ref-kpi-due-soon">0</div><div class="kpi-lbl">Due ≤ 30 days</div></div>
+        <div class="kpi-mini"><div class="kpi-val" style="color:var(--amber)" id="ref-kpi-due-soon">0</div><div class="kpi-lbl">Due ≤ 3 months</div></div>
         <div class="kpi-mini"><div class="kpi-val" style="color:var(--green)" id="ref-kpi-current">0</div><div class="kpi-lbl">Current</div></div>
       </div>
       <!-- Due soon alert -->
@@ -1098,39 +1152,32 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
       <!-- SECTION 8: Metrological Traceability -->
       <div class="form-section-title" style="margin-top:4px;">🔗 Metrological Traceability</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Reference instruments used in this calibration:</div>
-      <div id="trace-rows">
-        <div class="trace-row" style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1.5fr 1.2fr;gap:8px;margin-bottom:8px;align-items:end;">
-          <div><label class="form-label" style="font-size:10px;">Reference Instrument</label><input class="form-control" style="font-size:12px;" placeholder="e.g. pH 4.005 Buffer Standard"/></div>
-          <div><label class="form-label" style="font-size:10px;">Serial No.</label><input class="form-control" style="font-size:12px;" placeholder="CP/OO/O/P-00651"/></div>
-          <div><label class="form-label" style="font-size:10px;">Certificate No.</label><input class="form-control" style="font-size:12px;" placeholder="NMIM 36738261"/></div>
-          <div><label class="form-label" style="font-size:10px;">Source of Traceability</label><input class="form-control" style="font-size:12px;" placeholder="NMIM, Malaysia"/></div>
-          <div><label class="form-label" style="font-size:10px;">Cal Due Date</label><input class="form-control" style="font-size:12px;" type="date"/></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Reference instruments used in this calibration — search from Lab Reference Equipment register:</div>
+
+      <!-- Search box -->
+      <div style="position:relative;margin-bottom:10px;">
+        <div style="display:flex;gap:8px;">
+          <input class="form-control" id="trace-search" placeholder="🔍 Search reference instrument by name, ID or serial…" autocomplete="off" oninput="traceSearchInput(this.value)" style="flex:1;font-size:13px;"/>
         </div>
-        <div class="trace-row" style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1.5fr 1.2fr;gap:8px;margin-bottom:8px;align-items:end;">
-          <div><input class="form-control" style="font-size:12px;" placeholder="Reference instrument 2"/></div>
-          <div><input class="form-control" style="font-size:12px;"/></div>
-          <div><input class="form-control" style="font-size:12px;"/></div>
-          <div><input class="form-control" style="font-size:12px;"/></div>
-          <div><input class="form-control" style="font-size:12px;" type="date"/></div>
-        </div>
+        <div id="trace-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:500;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="addTraceRow()" style="margin-bottom:8px;">+ Add Row</button>
+
+      <!-- Added instruments table -->
+      <div id="trace-rows" style="margin-bottom:8px;"></div>
+      <div id="trace-empty" style="font-size:12px;color:var(--text-muted);padding:10px;background:var(--bg);border-radius:8px;text-align:center;display:block;">
+        No reference instruments added yet. Search above to add.
+      </div>
 
       <!-- SECTION 9: Result & Uncertainty -->
       <div class="form-section-title" style="margin-top:4px;">📊 Calibration Result</div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Overall Result <span class="req">*</span></label>
-          <select class="form-control" id="cal-result">
-            <option value="">— Select —</option>
-            <option value="Pass">Pass — Within Tolerance</option>
-            <option value="Fail">Fail — Out of Tolerance</option>
-            <option value="Adjusted">Adjusted and Re-verified</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Expanded Uncertainty (k=2)</label><input class="form-control" id="cal-uncertainty" placeholder="e.g. ±0.05 pH (k=2), 95%"/></div>
+      <div class="form-group"><label class="form-label">Overall Result <span class="req">*</span></label>
+        <select class="form-control" id="cal-result">
+          <option value="">— Select —</option>
+          <option value="Pass">Pass — Within Tolerance</option>
+          <option value="Fail">Fail — Out of Tolerance</option>
+          <option value="Adjusted">Adjusted and Re-verified</option>
+        </select>
       </div>
-      <div class="form-group"><label class="form-label">Calibration Remarks</label><textarea class="form-control" id="cal-remarks" placeholder="Additional observations or findings…"></textarea></div>
 
       <!-- SECTION 10: Signatures -->
       <div class="form-section-title" style="margin-top:4px;">✍️ Signatories</div>
@@ -1204,11 +1251,12 @@ textarea.form-control{resize:vertical;min-height:70px;}
         </div>
         <div id="approve-excel-section" style="display:none;">
           <label class="form-label">📎 Calibration Data File (Page 2+)</label>
-          <div class="file-attached" style="margin-top:0;">
+          <div class="file-attached" style="margin-top:0;cursor:pointer;" onclick="openUploadedFile()" title="Click to view file">
             <span style="font-size:20px;">📊</span>
             <span class="file-attached-name" id="approve-excel-name">—</span>
             <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">(uploaded by technician)</span>
           </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:6px;width:100%;" onclick="openUploadedFile()">👁 View Uploaded Data File</button>
         </div>
       </div>
 
@@ -1387,14 +1435,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <div class="form-group"><label class="form-label">Last Calibration Date</label><input class="form-control" id="ref-eq-last-cal" type="date"/></div>
         <div class="form-group"><label class="form-label">Calibration Due Date <span class="req">*</span></label><input class="form-control" id="ref-eq-due-date" type="date"/></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Calibration Interval</label>
-          <select class="form-control" id="ref-eq-interval">
-            <option>3 months</option><option>6 months</option><option>12 months</option><option>24 months</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Calibrated By (External Provider)</label><input class="form-control" id="ref-eq-cal-by" placeholder="e.g. Alphion Technology Sdn. Bhd."/></div>
-      </div>
+      <div class="form-group"><label class="form-label">Calibrated By (External Provider)</label><input class="form-control" id="ref-eq-cal-by" placeholder="e.g. Alphion Technology Sdn. Bhd."/></div>
       <div class="form-group"><label class="form-label">Remarks / Notes</label><textarea class="form-control" id="ref-eq-remarks" placeholder="Additional notes…"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -1414,6 +1455,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
     <div class="modal-body" id="view-ref-eq-body"></div>
     <div class="modal-footer">
       <button class="btn btn-danger btn-sm" id="del-ref-eq-btn">🗑 Delete</button>
+      <button class="btn btn-primary btn-sm" id="edit-ref-eq-btn">✏️ Edit</button>
       <button class="btn btn-outline" onclick="closeModal('modal-view-ref-eq')">Close</button>
     </div>
   </div>
@@ -1634,6 +1676,7 @@ function applyRoleUI(){
   const isTech=isJay||isEdmund;
   // Sidebar
   el('nav-equipment').classList.toggle('hidden-nav',isEdmund);
+  el('nav-completed').classList.toggle('hidden-nav',isTech&&!isJay);
   el('nav-customers').classList.toggle('hidden-nav',false);
   el('nav-ref-eq').classList.toggle('hidden-nav',false);
   el('nav-my-jobs').classList.toggle('hidden-nav',!isTech);
@@ -1653,7 +1696,8 @@ function applyRoleUI(){
 function el(id){return document.getElementById(id);}
 
 // ── NAV ──
-const TITLES={dashboard:'Dashboard',equipment:'Equipment & Calibration',customers:'Customer Database',
+const TITLES={dashboard:'Dashboard',equipment:'Equipment & Calibration',completed:'Completed Jobs',
+  customers:'Customer Database',
   'my-jobs':'My Jobs',approval:'Approval Queue',tests:'Test Requests & Results',
   documents:'Document Control',capa:'Nonconformance & CAPA','ref-eq':'Lab Reference Equipment',
   personnel:'Personnel',reports:'Reports & Audit Logs',settings:'Settings'};
@@ -1668,6 +1712,7 @@ function showView(name){
   });
   el('topbar-title').textContent=TITLES[name]||name;
   if(name==='equipment') renderEquipmentTable();
+  if(name==='completed') renderCompletedJobs();
   if(name==='customers') renderCustomerTable();
   if(name==='my-jobs') renderMyJobs();
   if(name==='approval') renderApprovalQueue();
@@ -1795,13 +1840,17 @@ function removePhoto(i){currentPhotos.splice(i,1);renderPhotoPreviews();}
 let currentExcel=null;
 function handleExcelSelect(e){
   const f=e.target.files[0]; if(!f)return;
-  currentExcel={name:f.name,size:f.size};
-  showExcelAttached(); e.target.value='';
+  const r=new FileReader();
+  r.onload=ev=>{currentExcel={name:f.name,size:f.size,dataUrl:ev.target.result};showExcelAttached();};
+  r.readAsDataURL(f);
+  e.target.value='';
 }
 function handleExcelDrop(e){
   e.preventDefault(); el('excel-drop-zone').classList.remove('dragover');
   const f=e.dataTransfer.files[0]; if(!f)return;
-  currentExcel={name:f.name,size:f.size}; showExcelAttached();
+  const r=new FileReader();
+  r.onload=ev=>{currentExcel={name:f.name,size:f.size,dataUrl:ev.target.result};showExcelAttached();};
+  r.readAsDataURL(f);
 }
 function showExcelAttached(){
   el('excel-attached').style.display='block';
@@ -2048,54 +2097,130 @@ async function openCalModal(jobNo){
   ['cal-cert-no','cal-page','cal-tag-no','cal-resolution','cal-next-due',
    'cal-cond-before','cal-cond-after','cal-cond-remark','cal-location',
    'cal-procedure','cal-sticker-no','cal-temp','cal-humidity','cal-pressure',
-   'cal-uncertainty','cal-remarks'].forEach(id=>{const e=el(id);if(e)e.value='';});
+   'cal-result'].forEach(id=>{const e=el(id);if(e)e.value='';});
   el('cal-result').value='';
   el('cal-cond-before').value='Good Physical Condition.';
   el('cal-cond-after').value='Calibrated as Requested by Customer.';
   // Auto-fill tag number from job — N/A if customer didn't provide one
   el('cal-tag-no').value=j&&j.tagNo?j.tagNo:'N/A';
-  // Reset traceability rows
-  const tr=el('trace-rows');
-  if(tr){ const rows=tr.querySelectorAll('.trace-row'); rows.forEach((r,i)=>{r.querySelectorAll('input').forEach(inp=>inp.value='');}); }
+  // Reset traceability
+  _traceSelected=[];
+  renderTraceCards();
+  el('trace-search').value='';
+  el('trace-suggestions').style.display='none';
   // Pre-fill if re-submitting after rejection (keep existing cert no)
   if(j&&j.calData){
     const cd=j.calData;
     ['cert-no','page','issue-date','date','receipt-date','tag-no','resolution','next-due',
      'cond-before','cond-after','cond-remark','location','procedure','sticker-no',
-     'temp','humidity','pressure','uncertainty','remarks','calibrated-by'].forEach(k=>{
+     'temp','humidity','pressure','calibrated-by'].forEach(k=>{
       const e=el('cal-'+k); if(e&&cd[k.replace(/-/g,'_')]!==undefined) e.value=cd[k.replace(/-/g,'_')]||'';
     });
     el('cal-result').value=cd.result||'';
+    // Restore traceability rows
+    if(cd.traceRows&&cd.traceRows.length){
+      _traceSelected=cd.traceRows.map(r=>({
+        id:'',name:r.instrument,serial:r.serial,certNo:r.certNo,
+        traceability:r.source,dueDate:r.dueDate
+      }));
+      renderTraceCards();
+    }
   } else {
     // New submission — use cert number assigned at job creation
     el('cal-cert-no').value=j&&j.certNo?j.certNo:'';
   }
   openModal('modal-perform-cal');
 }
-function getTraceRows(){
-  const rows=[]; const tr=el('trace-rows');
-  if(!tr)return rows;
-  tr.querySelectorAll('.trace-row').forEach(row=>{
-    const inputs=row.querySelectorAll('input');
-    if(inputs[0]&&inputs[0].value.trim()){
-      rows.push({instrument:inputs[0].value.trim(),serial:inputs[1]?.value.trim()||'',
-        certNo:inputs[2]?.value.trim()||'',source:inputs[3]?.value.trim()||'',dueDate:inputs[4]?.value||''});
-    }
+// ── TRACEABILITY SEARCH & SELECT ──
+let _traceSelected=[];
+
+function traceSearchInput(val){
+  const box=el('trace-suggestions');
+  if(!val.trim()){box.style.display='none';return;}
+  const q=val.toLowerCase();
+  const matches=_refEq.filter(r=>
+    (r.name||'').toLowerCase().includes(q)||
+    (r.id||'').toLowerCase().includes(q)||
+    (r.serial||'').toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){
+    box.innerHTML=`<div class="trace-suggestion" style="color:var(--text-muted);cursor:default;">No matching reference instruments found.</div>`;
+  } else {
+    const st=r=>getRefStatus(r.dueDate);
+    box.innerHTML=matches.map((r,i)=>`
+      <div class="trace-suggestion" data-idx="${i}">
+        <div class="ts-name">${r.name} <span style="font-size:11px;color:var(--text-muted);">(${r.id})</span></div>
+        <div class="ts-detail">S/N: ${r.serial||'—'} · Cert: ${r.certNo||'—'} · ${r.traceability||'—'} · Due: <span class="${st(r)==='Overdue'?'trace-card-status-overdue':st(r)==='Due Soon'?'trace-card-status-soon':'trace-card-status-ok'}">${r.dueDate||'—'}</span></div>
+      </div>`).join('');
+    matches.forEach((r,i)=>{
+      box.querySelectorAll('.trace-suggestion')[i].onclick=()=>addTraceFromRef(r);
+    });
+  }
+  box.style.display='block';
+}
+
+function addTraceFromRef(r){
+  // Prevent duplicate
+  if(_traceSelected.find(x=>x.id===r.id)){
+    alert(`"${r.name}" is already added.`); return;
+  }
+  _traceSelected.push({
+    id:r.id, name:r.name, serial:r.serial||'',
+    certNo:r.certNo||'', traceability:r.traceability||'',
+    dueDate:r.dueDate||''
   });
-  return rows;
+  el('trace-search').value='';
+  el('trace-suggestions').style.display='none';
+  renderTraceCards();
 }
-function addTraceRow(){
-  const tr=el('trace-rows'); if(!tr)return;
-  const div=document.createElement('div');
-  div.className='trace-row';
-  div.style.cssText='display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1.5fr 1.2fr;gap:8px;margin-bottom:8px;align-items:end;';
-  div.innerHTML=`<div><input class="form-control" style="font-size:12px;" placeholder="Reference instrument"/></div>
-    <div><input class="form-control" style="font-size:12px;"/></div>
-    <div><input class="form-control" style="font-size:12px;"/></div>
-    <div><input class="form-control" style="font-size:12px;"/></div>
-    <div><input class="form-control" style="font-size:12px;" type="date"/></div>`;
-  tr.appendChild(div);
+
+function removeTraceItem(id){
+  _traceSelected=_traceSelected.filter(x=>x.id!==id);
+  renderTraceCards();
 }
+
+function renderTraceCards(){
+  const container=el('trace-rows');
+  const empty=el('trace-empty');
+  if(!_traceSelected.length){
+    container.innerHTML='';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  container.innerHTML=_traceSelected.map((r,i)=>{
+    const st=getRefStatus(r.dueDate);
+    const stClass=st==='Overdue'?'trace-card-status-overdue':st==='Due Soon'?'trace-card-status-soon':'trace-card-status-ok';
+    return `<div class="trace-card">
+      <div class="trace-card-info">
+        <div class="trace-card-name">${r.name}</div>
+        <div class="trace-card-row">
+          <span class="trace-card-field">S/N: <span>${r.serial||'—'}</span></span>
+          <span class="trace-card-field">Cert: <span>${r.certNo||'—'}</span></span>
+          <span class="trace-card-field">Source: <span>${r.traceability||'—'}</span></span>
+          <span class="trace-card-field">Due: <span class="${stClass}">${r.dueDate||'—'}</span></span>
+          ${st==='Overdue'?'<span class="badge badge-red" style="font-size:10px;">Overdue!</span>':st==='Due Soon'?'<span class="badge badge-amber" style="font-size:10px;">Due Soon</span>':''}
+        </div>
+      </div>
+      <button onclick="removeTraceItem('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function getTraceRows(){
+  return _traceSelected.map(r=>({
+    instrument:r.name, serial:r.serial,
+    certNo:r.certNo, source:r.traceability, dueDate:r.dueDate
+  }));
+}
+
+// Close trace suggestions when clicking outside
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#trace-search')&&!e.target.closest('#trace-suggestions')){
+    const box=el('trace-suggestions');
+    if(box) box.style.display='none';
+  }
+});
 async function submitCalibration(){
   const result=el('cal-result').value;
   if(!result){alert('Please select a calibration result.');return;}
@@ -2131,8 +2256,7 @@ async function submitCalibration(){
     humidity:el('cal-humidity').value.trim(),
     pressure:el('cal-pressure').value.trim(),
     traceRows:getTraceRows(),
-    result, uncertainty:el('cal-uncertainty').value.trim(),
-    remarks:el('cal-remarks').value.trim(),
+    result,
     calibrated_by:el('cal-calibrated-by').value.trim(),
     submittedBy:currentUser,
     submittedAt:new Date().toISOString()
@@ -2155,17 +2279,17 @@ function openApproveModal(jobNo){
   const j=getJob(jobNo);
   if(!j)return;
   el('approve-job-summary').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px;">
       <div><span style="color:var(--text-muted);">Job No.:</span> <strong>${j.jobNo}</strong></div>
+      <div><span style="color:var(--text-muted);">Cert No.:</span> <strong>${j.certNo||'—'}</strong></div>
+      <div><span style="color:var(--text-muted);">Date of Cal.:</span> ${j.calData?.date||'—'}</div>
       <div><span style="color:var(--text-muted);">Customer:</span> ${j.custName}</div>
-      <div><span style="color:var(--text-muted);">Equipment:</span> ${j.eqName}</div>
+      <div><span style="color:var(--text-muted);">Equipment:</span> ${j.eqName} ${j.serial?'('+j.serial+')':''}</div>
       <div><span style="color:var(--text-muted);">Submitted by:</span> ${USERS[j.calData?.submittedBy]?.name||j.calData?.submittedBy||'—'}</div>
     </div>`;
   const cd=j.calData||{};
   el('approve-cal-result').innerHTML=`
-    <strong>${cd.result||'—'}</strong> &nbsp;·&nbsp; Date: ${cd.date||'—'} &nbsp;·&nbsp; Cert: ${cd.certNo||'—'}<br/>
-    Uncertainty: ${cd.uncertainty||'—'} &nbsp;·&nbsp; Traceability: ${cd.traceability||'—'}
-    ${cd.remarks?`<br/><em style="color:var(--text-muted);">"${cd.remarks}"</em>`:''}`;
+    <strong>${cd.result||'—'}</strong> &nbsp;·&nbsp; Date: ${cd.date||'—'} &nbsp;·&nbsp; Cert: ${cd.cert_no||'—'}`;
   if(j.excelFile){
     el('approve-excel-section').style.display='block';
     el('approve-excel-name').textContent=j.excelFile.name;
@@ -2174,6 +2298,26 @@ function openApproveModal(jobNo){
   }
   el('approve-comments').value='';
   openModal('modal-approve-job');
+}
+
+function openUploadedFile(){
+  const j=getJob(approvalJobNo); if(!j||!j.excelFile)return;
+  // Open the base64 file in a new tab
+  try{
+    const f=j.excelFile;
+    const url=f.dataUrl||f.url||null;
+    if(url){
+      const win=window.open();
+      if(win){
+        win.document.write(`<html><body style="margin:0;background:#222;">
+          <p style="color:#fff;font-family:sans-serif;padding:12px;">📊 ${f.name} — uploaded by technician</p>
+          <iframe src="${url}" style="width:100%;height:calc(100vh - 50px);border:none;"></iframe>
+          </body></html>`);
+      }
+    } else {
+      alert('File preview not available. The file was uploaded without a data URL.');
+    }
+  }catch(e){alert('Could not open file: '+e.message);}
 }
 async function approveJob(){
   const comments=el('approve-comments').value.trim();
@@ -2328,7 +2472,7 @@ function viewJobDetail(jobNo){
     <table style="width:100%;">
       ${r('Date',j.calData.date)}${r('Certificate No.',j.calData.certNo)}
       ${r('Result','<span class="badge '+(j.calData.result==='Pass'?'badge-green':j.calData.result==='Fail'?'badge-red':'badge-amber')+'">'+j.calData.result+'</span>')}
-      ${r('Uncertainty',j.calData.uncertainty)}${r('Traceability',j.calData.traceability)}
+      ${r('Traceability',j.calData.traceability)}
       ${r('Next Due',j.calData.nextDue)}${r('Remarks',j.calData.remarks)}
       ${r('Submitted By',USERS[j.calData.submittedBy]?.name||j.calData.submittedBy)}
     </table>`;
@@ -2545,8 +2689,6 @@ function previewCertPage1(){
     pressure:el('cal-pressure').value||'—',
     traceRows:getTraceRows(),
     result:el('cal-result').value||'—',
-    uncertainty:el('cal-uncertainty').value||'—',
-    remarks:el('cal-remarks').value||'',
     calibrated_by:el('cal-calibrated-by').value||'—'
   };
   el('cert-preview-body').innerHTML=buildCertPage1HTML(cd,s);
@@ -2647,7 +2789,6 @@ function buildCertPage1HTML(cd,s){
         <div style="font-size:11px;color:#555;">Approved By</div>
       </div>
     </div>
-    ${cd.uncertainty?`<div style="margin-top:12px;font-size:10px;color:#888;text-align:center;">The expanded measurement uncertainty is stated with a coverage factor k = 2, providing a level of confidence of approximately 95%.</div>`:''}
     <div style="margin-top:10px;background:#ffffcc;border:1px solid #e0e000;padding:10px;font-size:10px;color:#555;border-radius:4px;">
       This certificate is issued in accordance with the terms of the accreditation granted by Skim Akreditasi Makmal Malaysia (SAMM). 
       SAMM has assessed the laboratory's measurement capability and its traceability to recognized national standards. 
@@ -2680,9 +2821,7 @@ function openApproveModal(jobNo){
   const calResult=cd.result||'—';
   el('approve-cal-result').innerHTML=`
     <strong style="font-size:14px;color:${calResult==='Pass'?'var(--green)':calResult==='Fail'?'var(--red)':'var(--amber)'}">${calResult}</strong>
-    &nbsp;·&nbsp; Uncertainty: ${cd.uncertainty||'—'}
-    ${cd.remarks?`<br/><em style="color:var(--text-muted);font-size:12px;">"${cd.remarks}"</em>`:''}`;
-
+    &nbsp;·&nbsp; Date: ${cd.date||'—'} &nbsp;·&nbsp; Cert: ${cd.cert_no||'—'}`;
   // File
   if(j.excelFile){
     el('approve-excel-section').style.display='block';
@@ -2700,7 +2839,21 @@ function openApproveModal(jobNo){
 }
 
 // ── REFERENCE EQUIPMENT ──
+function openAddRefEqModal(){
+  const modal=el('modal-add-ref-eq');
+  modal.dataset.editId='';
+  el('ref-eq-id').readOnly=false;
+  modal.querySelector('.modal-title').textContent='🏛️ Add Reference Equipment';
+  const saveBtn=modal.querySelector('.btn-primary');
+  if(saveBtn) saveBtn.textContent='💾 Save Reference Equipment';
+  ['ref-eq-id','ref-eq-name','ref-eq-brand','ref-eq-model','ref-eq-serial','ref-eq-location',
+   'ref-eq-range','ref-eq-resolution','ref-eq-cert-no','ref-eq-last-cal','ref-eq-due-date','ref-eq-cal-by','ref-eq-remarks'].forEach(f=>{const e=el(f);if(e)e.value='';});
+  openModal('modal-add-ref-eq');
+}
 async function saveRefEquipment(){
+  const modal=el('modal-add-ref-eq');
+  const editId=modal.dataset.editId||'';
+  const isEdit=!!editId;
   const id=el('ref-eq-id').value.trim();
   const name=el('ref-eq-name').value.trim();
   const serial=el('ref-eq-serial').value.trim();
@@ -2709,7 +2862,9 @@ async function saveRefEquipment(){
   if(!name){alert('Equipment name is required.');return;}
   if(!serial){alert('Serial number is required.');return;}
   if(!dueDate){alert('Calibration due date is required.');return;}
-  if(_refEq.find(r=>r.id===id)){alert('Equipment ID already exists. Please use a unique ID.');return;}
+  // Only check duplicate ID when adding new (not editing)
+  if(!isEdit && _refEq.find(r=>r.id===id)){alert('Equipment ID already exists. Please use a unique ID.');return;}
+  const existing=_refEq.find(r=>r.id===id);
   const record={
     id, name, brand:el('ref-eq-brand').value.trim(),
     model:el('ref-eq-model').value.trim(), serial,
@@ -2718,18 +2873,30 @@ async function saveRefEquipment(){
     traceability:el('ref-eq-traceability').value,
     certNo:el('ref-eq-cert-no').value.trim(),
     lastCal:el('ref-eq-last-cal').value, dueDate,
-    interval:el('ref-eq-interval').value,
     calBy:el('ref-eq-cal-by').value.trim(),
     remarks:el('ref-eq-remarks').value.trim(),
-    addedAt:new Date().toISOString()
+    addedAt:existing?.addedAt||new Date().toISOString()
   };
   await SB.upsert('wl_ref_equipment',id,record);
-  _refEq.push(record);
+  if(isEdit){
+    const idx=_refEq.findIndex(r=>r.id===id);
+    if(idx>=0)_refEq[idx]=record; else _refEq.push(record);
+  } else {
+    _refEq.push(record);
+  }
+  // Reset modal back to Add mode
+  modal.dataset.editId='';
+  el('ref-eq-id').readOnly=false;
+  modal.querySelector('.modal-title').textContent='🏛️ Add Reference Equipment';
+  const saveBtn=modal.querySelector('.btn-primary');
+  if(saveBtn) saveBtn.textContent='💾 Save Reference Equipment';
   closeModal('modal-add-ref-eq');
   renderRefEqTable();
-  addAudit('🏛️',`Reference equipment <strong>${name}</strong> (${id}) added`);
-  ['ref-eq-id','ref-eq-name','ref-eq-brand','ref-eq-model','ref-eq-serial','ref-eq-location',
-   'ref-eq-range','ref-eq-resolution','ref-eq-cert-no','ref-eq-last-cal','ref-eq-due-date','ref-eq-cal-by','ref-eq-remarks'].forEach(f=>{const e=el(f);if(e)e.value='';});
+  addAudit('🏛️',`Reference equipment <strong>${name}</strong> (${id}) ${isEdit?'updated':'added'}`);
+  if(!isEdit){
+    ['ref-eq-id','ref-eq-name','ref-eq-brand','ref-eq-model','ref-eq-serial','ref-eq-location',
+     'ref-eq-range','ref-eq-resolution','ref-eq-cert-no','ref-eq-last-cal','ref-eq-due-date','ref-eq-cal-by','ref-eq-remarks'].forEach(f=>{const e=el(f);if(e)e.value='';});
+  }
 }
 function getRefStatus(dueDate){
   if(!dueDate)return'Unknown';
@@ -2737,7 +2904,7 @@ function getRefStatus(dueDate){
   const due=new Date(dueDate);
   const diffDays=Math.round((due-today)/(1000*60*60*24));
   if(diffDays<0)return'Overdue';
-  if(diffDays<=30)return'Due Soon';
+  if(diffDays<=90)return'Due Soon';
   return'Current';
 }
 function renderRefEqTable(){
@@ -2767,7 +2934,7 @@ function renderRefEqTable(){
     alertEl.innerHTML=`<div class="alert-item ${overdue>0?'urgent':'warn'}" style="border-radius:10px;">
       <span class="alert-icon">${overdue>0?'🔴':'🟡'}</span>
       <div class="alert-text">
-        <strong>${overdue>0?overdue+' reference instrument(s) calibration OVERDUE':''} ${dueSoon>0?dueSoon+' instrument(s) due within 30 days':''}</strong>
+        <strong>${overdue>0?overdue+' reference instrument(s) calibration OVERDUE':''} ${dueSoon>0?dueSoon+' instrument(s) due within 3 months':''}</strong>
         <span>Review the table below and arrange external calibration.</span>
       </div></div>`;
   } else { alertEl.style.display='none'; }
@@ -2787,7 +2954,8 @@ function renderRefEqTable(){
     <td><strong style="color:${r.calStatus==='Overdue'?'var(--red)':r.calStatus==='Due Soon'?'var(--amber)':'var(--green)'}">${r.dueDate||'—'}</strong></td>
     <td><span class="badge ${SB2[r.calStatus]||'badge-slate'}">${r.calStatus}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="viewRefEq('${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteRefEq('${r.id}')">🗑</button></td>
+        ${currentUser==='admin'?`<button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openEditRefEqModal('${r.id}')">✏️</button>`:''}
+        ${currentUser==='admin'?`<button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteRefEq('${r.id}')">🗑</button>`:''}</td>
   </tr>`).join('');
 }
 function viewRefEq(id){
@@ -2800,10 +2968,43 @@ function viewRefEq(id){
     <div class="form-section-title">🔩 Equipment</div>
     <table style="width:100%;">${row('ID',r.id)}${row('Name',r.name)}${row('Brand',r.brand)}${row('Model',r.model)}${row('Serial No.',r.serial)}${row('Location',r.location)}${row('Range',r.range)}${row('Resolution',r.resolution)}</table>
     <div class="form-section-title" style="margin-top:14px;">🔗 Traceability & Calibration</div>
-    <table style="width:100%;">${row('Traceability',r.traceability)}${row('Certificate No.',r.certNo)}${row('Last Calibration',r.lastCal)}${row('Due Date','<strong style="color:'+(st==='Overdue'?'var(--red)':st==='Due Soon'?'var(--amber)':'var(--green)')+'">'+r.dueDate+'</strong>')}${row('Status','<span class="badge '+SB2[st]+'">'+st+'</span>')}${row('Interval',r.interval)}${row('Calibrated By',r.calBy)}</table>
+    <table style="width:100%;">${row('Traceability',r.traceability)}${row('Certificate No.',r.certNo)}${row('Last Calibration',r.lastCal)}${row('Due Date','<strong style="color:'+(st==='Overdue'?'var(--red)':st==='Due Soon'?'var(--amber)':'var(--green)')+'">'+r.dueDate+'</strong>')}${row('Status','<span class="badge '+SB2[st]+'">'+st+'</span>')}${row('Calibrated By',r.calBy)}</table>
     ${r.remarks?`<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:13px;"><strong>Remarks:</strong> ${r.remarks}</div>`:''}`;
   el('del-ref-eq-btn').onclick=()=>{closeModal('modal-view-ref-eq');deleteRefEq(id);};
+  el('del-ref-eq-btn').style.display=currentUser==='admin'?'':'none';
+  const editBtn=el('edit-ref-eq-btn');
+  if(editBtn){
+    editBtn.style.display=currentUser==='admin'?'':'none';
+    editBtn.onclick=()=>{closeModal('modal-view-ref-eq');openEditRefEqModal(id);};
+  }
   openModal('modal-view-ref-eq');
+}
+
+function openEditRefEqModal(id){
+  const r=_refEq.find(x=>x.id===id); if(!r)return;
+  // Change modal title to Edit mode
+  el('modal-add-ref-eq').querySelector('.modal-title').textContent='✏️ Edit Reference Equipment';
+  // Store editing ID
+  el('modal-add-ref-eq').dataset.editId=id;
+  // Pre-fill all fields
+  el('ref-eq-id').value=r.id; el('ref-eq-id').readOnly=true; // ID should not change
+  el('ref-eq-name').value=r.name||'';
+  el('ref-eq-brand').value=r.brand||'';
+  el('ref-eq-model').value=r.model||'';
+  el('ref-eq-serial').value=r.serial||'';
+  el('ref-eq-location').value=r.location||'';
+  el('ref-eq-range').value=r.range||'';
+  el('ref-eq-resolution').value=r.resolution||'';
+  el('ref-eq-traceability').value=r.traceability||'NMIM, Malaysia';
+  el('ref-eq-cert-no').value=r.certNo||'';
+  el('ref-eq-last-cal').value=r.lastCal||'';
+  el('ref-eq-due-date').value=r.dueDate||'';
+  el('ref-eq-cal-by').value=r.calBy||'';
+  el('ref-eq-remarks').value=r.remarks||'';
+  // Change save button to update
+  const saveBtn=el('modal-add-ref-eq').querySelector('.btn-primary');
+  if(saveBtn) saveBtn.textContent='💾 Update Equipment';
+  openModal('modal-add-ref-eq');
 }
 async function deleteRefEq(id){
   if(!confirm('Delete this reference equipment record?'))return;
@@ -3027,6 +3228,59 @@ document.addEventListener('click',e=>{
     if(box) box.style.display='none';
   }
 });
+
+// ── COMPLETED JOBS ──
+function renderCompletedJobs(){
+  const list=_jobs.filter(j=>j.status==='Completed');
+  const q=(el('comp-search')?.value||'').toLowerCase();
+  const bf=el('comp-filter-billing')?.value||'';
+  const tbody=el('completed-tbody'); if(!tbody)return;
+  const pendingBilling=list.filter(j=>!j.billed).length;
+  const billed=list.filter(j=>j.billed).length;
+  el('comp-kpi-total').textContent=list.length;
+  el('comp-kpi-pending-billing').textContent=pendingBilling;
+  el('comp-kpi-billed').textContent=billed;
+  el('completed-sub').textContent=`${list.length} completed · ${pendingBilling} pending billing · ${billed} billed`;
+  const filtered=list.filter(j=>{
+    const ms=!q||(j.jobNo||'').toLowerCase().includes(q)||(j.certNo||'').toLowerCase().includes(q)||
+      (j.custName||'').toLowerCase().includes(q)||(j.eqName||'').toLowerCase().includes(q);
+    const bs=!bf||(bf==='billed'&&j.billed)||(bf==='pending'&&!j.billed);
+    return ms&&bs;
+  }).sort((a,b)=>new Date(b.approvedAt||0)-new Date(a.approvedAt||0));
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✅</div><p>${list.length?'No matching records.':'No completed jobs yet.'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=filtered.map(j=>`<tr>
+    <td><span style="font-family:'DM Mono';font-size:12px;font-weight:700;">${j.jobNo}</span></td>
+    <td><span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--blue);">${j.certNo||'—'}</span></td>
+    <td><strong>${j.custName}</strong><br/><span style="font-size:11px;color:var(--text-muted);">${j.attention||''}</span></td>
+    <td>${j.eqName}<br/><span style="font-size:11px;color:var(--text-muted);">${[j.brand,j.model].filter(Boolean).join(' / ')||''}</span></td>
+    <td>${j.calData?.date||j.approvedAt?.split('T')[0]||'—'}</td>
+    <td>${USERS[j.approvedBy]?.name||j.approvedBy||'—'}</td>
+    <td>${j.billed
+      ?`<span class="badge badge-green">✅ Billed</span><br/><span style="font-size:10px;color:var(--text-muted);">${j.billedAt?.split('T')[0]||''}</span>`
+      :`<span class="badge badge-amber">⏳ Pending</span>`}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-outline btn-sm" onclick="showCertFromJob('${j.jobNo}')">📄 Cert</button>
+      ${!j.billed&&currentUser==='admin'
+        ?`<button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="markBilled('${j.jobNo}')">💰 Billing</button>`
+        :''}
+    </td>
+  </tr>`).join('');
+}
+
+async function markBilled(jobNo){
+  const j=getJob(jobNo); if(!j)return;
+  if(!confirm(`Mark job ${jobNo} (${j.certNo||''}) for ${j.custName} as BILLED?\n\nThis means billing has been handed over to the billing person in charge.`))return;
+  await updateJob(jobNo,j=>{
+    j.billed=true;
+    j.billedAt=new Date().toISOString();
+    j.history.push({action:'💰 Marked for billing',by:currentUser,time:new Date().toISOString()});
+  });
+  renderCompletedJobs();
+  addAudit('💰',`Job <strong>${jobNo}</strong> marked for billing`);
+}
 
 // ── INIT ──
 el('dash-date').textContent='Week of '+new Date().toLocaleDateString('en-MY',{day:'numeric',month:'long',year:'numeric'});
