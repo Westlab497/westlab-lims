@@ -408,10 +408,11 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
 <!-- ══ SIDEBAR ══ -->
 <nav id="sidebar">
-  <div class="sidebar-logo">
+  <div class="sidebar-logo" id="sidebar-logo-area" onclick="if(currentUser==='admin')showView('settings')" style="cursor:pointer;" title="Click to edit company settings">
     <div class="logo-badge">ISO 17025</div>
     <h1 id="sidebar-lab-name">Westlab</h1>
     <p>Calibration &amp; Testing System</p>
+    <div id="sidebar-edit-hint" style="display:none;font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;">✏️ Click to edit</div>
   </div>
   <div class="sidebar-nav">
     <div class="nav-section-label">Overview</div>
@@ -755,28 +756,62 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
     <!-- ════ SETTINGS ════ -->
     <div class="view" id="view-settings">
-      <div class="page-header"><div class="page-title">System Settings</div><button class="btn btn-primary" onclick="saveSettings()">Save Changes</button></div>
+      <div class="page-header"><div class="page-title">⚙️ System Settings</div><button class="btn btn-primary" onclick="saveSettings()">💾 Save Changes</button></div>
       <div id="settings-saved-banner" class="success-banner">✅ Settings saved successfully.</div>
+
       <div class="grid-2">
+        <!-- COMPANY INFO -->
         <div class="card">
-          <div class="card-header"><span class="card-title">Laboratory Information</span></div>
+          <div class="card-header"><span class="card-title">🏢 Company Information</span></div>
           <div class="card-body">
-            <div class="form-group"><label class="form-label">Laboratory Name</label><input id="set-lab-name" class="form-control" value="Westlab"/></div>
-            <div class="form-group"><label class="form-label">Accreditation Number</label><input id="set-accred-num" class="form-control" value="WL-2024-0001"/></div>
-            <div class="form-group"><label class="form-label">Accreditation Body</label><input id="set-accred-body" class="form-control" value="ILAC / A2LA"/></div>
-            <div class="form-group"><label class="form-label">Technical Manager</label><input id="set-tech-manager" class="form-control" value="Lab Manager"/></div>
-            <div class="form-group"><label class="form-label">Lab Address</label><textarea id="set-address" class="form-control">123 Lab Street, Kuala Lumpur, Malaysia</textarea></div>
+            <div class="form-group"><label class="form-label">Laboratory / Company Name</label><input id="set-lab-name" class="form-control" placeholder="e.g. Westlab Sdn Bhd"/></div>
+            <div class="form-group"><label class="form-label">Company Registration No.</label><input id="set-reg-no" class="form-control" placeholder="e.g. 1234567-A"/></div>
+            <div class="form-group"><label class="form-label">Branch / Location</label><input id="set-branch" class="form-control" placeholder="e.g. Selangor Branch"/></div>
+            <div class="form-group"><label class="form-label">Company Address</label><textarea id="set-address" class="form-control" rows="3" placeholder="Full company address"></textarea></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Tel No.</label><input id="set-tel" class="form-control" placeholder="+60-3-XXXX XXXX"/></div>
+              <div class="form-group"><label class="form-label">Fax No.</label><input id="set-fax" class="form-control" placeholder="+60-3-XXXX XXXX"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Email</label><input id="set-email" class="form-control" type="email" placeholder="info@westlab.com"/></div>
+              <div class="form-group"><label class="form-label">Website</label><input id="set-website" class="form-control" placeholder="www.westlab.com"/></div>
+            </div>
           </div>
         </div>
+
+        <!-- ACCREDITATION INFO -->
         <div class="card">
-          <div class="card-header"><span class="card-title">Admin Login</span></div>
+          <div class="card-header"><span class="card-title">📋 Accreditation & Lab Details</span></div>
           <div class="card-body">
-            <div class="form-group"><label class="form-label">Admin Username</label><input id="set-username" class="form-control" value="admin"/></div>
+            <div class="form-group"><label class="form-label">Accreditation Number</label><input id="set-accred-num" class="form-control" placeholder="e.g. WL-2024-0001"/></div>
+            <div class="form-group"><label class="form-label">Accreditation Body</label><input id="set-accred-body" class="form-control" placeholder="e.g. ILAC / A2LA"/></div>
+            <div class="form-group"><label class="form-label">Technical Manager</label><input id="set-tech-manager" class="form-control" placeholder="Name of technical manager"/></div>
+            <div class="form-group"><label class="form-label">Quality Manager</label><input id="set-quality-manager" class="form-control" placeholder="Name of quality manager"/></div>
+          </div>
+        </div>
+
+        <!-- ADMIN LOGIN -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔐 Admin Login</span></div>
+          <div class="card-body">
+            <div class="form-group"><label class="form-label">Admin Username</label><input id="set-username" class="form-control" placeholder="admin"/></div>
             <div class="form-group"><label class="form-label">New Admin Password</label><input id="set-password" class="form-control" type="password" placeholder="Leave blank to keep current"/></div>
-            <div class="form-group"><label class="form-label">Notification Email</label><input id="set-email" class="form-control" value="lab@westlab.com"/></div>
-            <div class="form-group"><label class="form-label" style="margin-bottom:8px;">Reset Job Counter</label>
-              <button class="btn btn-danger btn-sm" onclick="resetJobCounter()">🔄 Reset to WL26-00001</button>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Only resets the counter — existing jobs are not affected.</div>
+          </div>
+        </div>
+
+        <!-- SYSTEM -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔧 System</span></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label" style="margin-bottom:8px;">Reset Job Counter</label>
+              <button class="btn btn-danger btn-sm" onclick="resetJobCounter()">🔄 Reset Job No. to 00001</button>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Only resets the counter — existing jobs are not deleted.</div>
+            </div>
+            <div class="form-group" style="margin-top:16px;">
+              <label class="form-label" style="margin-bottom:8px;">Reset Certificate Counter</label>
+              <button class="btn btn-danger btn-sm" onclick="resetCertCounter()">🔄 Reset Cert No. to 00001</button>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Only resets the cert counter for this year.</div>
             </div>
           </div>
         </div>
@@ -1540,6 +1575,9 @@ function applyRoleUI(){
   // Dashboard
   el('btn-new-job').style.display=isAdmin?'':'none';
   el('dash-admin-btns').style.display=isAdmin?'flex':'none';
+  // Show clickable hint on sidebar logo for admin
+  const hint=document.getElementById('sidebar-edit-hint');
+  if(hint) hint.style.display=isAdmin?'block':'none';
 }
 
 function el(id){return document.getElementById(id);}
@@ -1579,18 +1617,34 @@ function applySettings(s){
   ['sidebar-lab-name','sidebar-lab-label','login-lab-name'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=name;});
   const an=document.getElementById('sidebar-accred-num');if(an)an.textContent=s.accredNum||'';
   document.title=name+' — ISO 17025 Lab Management System';
-  const map={labName:'set-lab-name',accredNum:'set-accred-num',accredBody:'set-accred-body',
-    techManager:'set-tech-manager',address:'set-address',email:'set-email',username:'set-username'};
+  // Fill all settings fields
+  const map={
+    labName:'set-lab-name', regNo:'set-reg-no', branch:'set-branch',
+    address:'set-address', tel:'set-tel', fax:'set-fax',
+    email:'set-email', website:'set-website',
+    accredNum:'set-accred-num', accredBody:'set-accred-body',
+    techManager:'set-tech-manager', qualityManager:'set-quality-manager',
+    username:'set-username'
+  };
   Object.entries(map).forEach(([k,id])=>{const e=document.getElementById(id);if(e&&s[k]!==undefined)e.value=s[k];});
+  // Show edit hint for admin
+  const hint=document.getElementById('sidebar-edit-hint');
+  if(hint) hint.style.display=currentUser==='admin'?'block':'none';
 }
 async function saveSettings(){
   const s=Object.assign({},_settings);
   s.labName=el('set-lab-name').value.trim()||'Westlab';
+  s.regNo=el('set-reg-no').value.trim();
+  s.branch=el('set-branch').value.trim();
+  s.address=el('set-address').value.trim();
+  s.tel=el('set-tel').value.trim();
+  s.fax=el('set-fax').value.trim();
+  s.email=el('set-email').value.trim();
+  s.website=el('set-website').value.trim();
   s.accredNum=el('set-accred-num').value.trim();
   s.accredBody=el('set-accred-body').value.trim();
   s.techManager=el('set-tech-manager').value.trim();
-  s.address=el('set-address').value.trim();
-  s.email=el('set-email').value.trim();
+  s.qualityManager=el('set-quality-manager').value.trim();
   s.username=el('set-username').value.trim()||'admin';
   const pw=el('set-password').value;if(pw)s.password=pw;
   await SB.upsert('wl_settings','main',s);
@@ -1604,7 +1658,16 @@ function resetJobCounter(){
     method:'PATCH',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({val:0})
-  }).then(()=>alert('Counter reset successfully!'));
+  }).then(()=>alert('Job counter reset! Next job: WL'+new Date().getFullYear().toString().slice(-2)+'-00001'));
+}
+function resetCertCounter(){
+  const yk=new Date().getFullYear().toString().slice(-2);
+  if(!confirm('Reset certificate counter to 0 for '+20+yk+'? The next cert will be WLCS'+yk+'XXOO001.')) return;
+  fetch(`${SUPA_URL}/rest/v1/wl_sequences?id=eq.cert_seq_${yk}`,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({val:0})
+  }).then(()=>alert('Certificate counter reset successfully!'));
 }
 // ── JOB NUMBER ──
 async function peekJobNo(){
