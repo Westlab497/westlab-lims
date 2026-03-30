@@ -435,7 +435,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
 <!-- ══ SIDEBAR ══ -->
 <nav id="sidebar">
-  <div class="sidebar-logo" id="sidebar-logo-area" onclick="if(currentUser==='admin')showView('settings')" style="cursor:pointer;" title="Click to edit company settings">
+  <div class="sidebar-logo" id="sidebar-logo-area" onclick="if(isAdmin())showView('settings')" style="cursor:pointer;" title="Click to edit company settings">
     <div class="logo-badge">ISO 17025</div>
     <h1 id="sidebar-lab-name">Westlab</h1>
     <p>Calibration &amp; Testing System</p>
@@ -458,6 +458,7 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
     <div class="nav-section-label" id="nav-admin-section">Administration</div>
     <button class="nav-item" id="nav-personnel" onclick="showView('personnel')"><span class="nav-icon">👥</span> Personnel</button>
+    <button class="nav-item" id="nav-deleted" onclick="showView('deleted')"><span class="nav-icon">🗑️</span> Deleted Jobs</button>
     <button class="nav-item" id="nav-reports" onclick="showView('reports')"><span class="nav-icon">📈</span> Reports &amp; Audit Logs</button>
     <button class="nav-item" id="nav-settings" onclick="showView('settings')"><span class="nav-icon">⚙️</span> Settings</button>
     <button class="nav-item" onclick="doLogout()" style="margin-top:8px;color:rgba(255,100,100,.8);"><span class="nav-icon">🚪</span> Logout</button>
@@ -820,6 +821,29 @@ textarea.form-control{resize:vertical;min-height:70px;}
       </div>
     </div>
 
+    <!-- ════ DELETED JOBS ════ -->
+    <div class="view" id="view-deleted">
+      <div class="page-header">
+        <div><div class="page-title">🗑️ Deleted Jobs</div>
+        <div class="page-sub">Job records deleted by admin — kept for audit trail</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Deleted Job Register</span>
+          <input id="deleted-search" class="filter-select" placeholder="Search…" style="width:200px;" oninput="renderDeletedJobs()"/>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Job No.</th><th>Cert No.</th><th>Customer</th><th>Equipment</th>
+              <th>Status at Deletion</th><th>Deleted By</th><th>Deleted At</th>
+            </tr></thead>
+            <tbody id="deleted-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ════ SETTINGS ════ -->
     <div class="view" id="view-settings">
       <div class="page-header"><div class="page-title">⚙️ System Settings</div><button class="btn btn-primary" onclick="saveSettings()">💾 Save Changes</button></div>
@@ -1008,8 +1032,6 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <label class="form-label">Assign To <span class="req">*</span></label>
         <select class="form-control" id="assign-to-select">
           <option value="">— Select user —</option>
-          <option value="jay">Jay (Senior Technician &amp; Approver)</option>
-          <option value="edmund">Edmund (Calibration Technician)</option>
         </select>
       </div>
       <div class="form-group">
@@ -1040,9 +1062,6 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <label class="form-label">Re-assign To <span class="req">*</span></label>
         <select class="form-control" id="reassign-to-select">
           <option value="">— Select user —</option>
-          <option value="admin">Admin</option>
-          <option value="jay">Jay (Senior Technician &amp; Approver)</option>
-          <option value="edmund">Edmund (Calibration Technician)</option>
         </select>
       </div>
       <div class="form-group">
@@ -1400,8 +1419,8 @@ textarea.form-control{resize:vertical;min-height:70px;}
       </div>
       <div class="form-group"><label class="form-label">Role <span class="req">*</span></label>
         <select class="form-control" id="staff-role">
-          <option value="Technician">Calibration Technician</option>
-          <option value="Approver">Senior Technician &amp; Approver</option>
+          <option value="Engineer">Engineer / Technician</option>
+          <option value="Signatory">Approved Signatory</option>
         </select>
       </div>
       <div class="form-row">
@@ -1742,35 +1761,46 @@ function doLogout(){
 })();
 
 // ── ROLE-BASED UI ──
+function getUserRole(username){
+  return USERS[username]?.role||'Engineer';
+}
+function isAdmin(u){ return getUserRole(u||currentUser)==='Admin'; }
+function isSignatory(u){ return getUserRole(u||currentUser)==='Signatory'; }
+function isEngineer(u){ return getUserRole(u||currentUser)==='Engineer'; }
+
 function applyRoleUI(){
-  const isAdmin=currentUser==='admin';
-  const isJay=currentUser==='jay';
-  const isEdmund=currentUser==='edmund';
-  const isTech=isJay||isEdmund;
-  // Sidebar
-  el('nav-equipment').classList.toggle('hidden-nav',isEdmund);
-  el('nav-completed').classList.toggle('hidden-nav',isTech&&!isJay);
+  const role=getUserRole(currentUser);
+  const admin=role==='Admin';
+  const signatory=role==='Signatory';
+  const engineer=role==='Engineer';
+
+  // Sidebar nav
+  el('nav-equipment').classList.toggle('hidden-nav',false); // all can see jobs
+  el('nav-completed').classList.toggle('hidden-nav',engineer); // admin + signatory
   el('nav-customers').classList.toggle('hidden-nav',false);
   el('nav-ref-eq').classList.toggle('hidden-nav',false);
-  el('nav-my-jobs').classList.toggle('hidden-nav',!isTech);
-  el('nav-approval').classList.toggle('hidden-nav',!isJay);
-  el('nav-admin-section').style.display=isAdmin?'':'none';
-  el('nav-personnel').classList.toggle('hidden-nav',!isAdmin);
-  el('nav-reports').classList.toggle('hidden-nav',!isAdmin);
-  el('nav-settings').classList.toggle('hidden-nav',!isAdmin);
-  // Dashboard
-  el('btn-new-job').style.display=isAdmin?'':'none';
-  el('dash-admin-btns').style.display=isAdmin?'flex':'none';
-  // Show clickable hint on sidebar logo for admin
+  el('nav-my-jobs').classList.toggle('hidden-nav',admin); // techs + signatories see My Jobs
+  el('nav-approval').classList.toggle('hidden-nav',!signatory); // only signatory
+  el('nav-admin-section').style.display=admin?'':'none';
+  el('nav-personnel').classList.toggle('hidden-nav',!admin);
+  el('nav-deleted').classList.toggle('hidden-nav',!admin);
+  el('nav-reports').classList.toggle('hidden-nav',!admin);
+  el('nav-settings').classList.toggle('hidden-nav',!admin);
+
+  // Dashboard buttons
+  el('btn-new-job').style.display=admin?'':'none';
+  el('dash-admin-btns').style.display=admin?'flex':'none';
+
+  // Sidebar edit hint
   const hint=document.getElementById('sidebar-edit-hint');
-  if(hint) hint.style.display=isAdmin?'block':'none';
+  if(hint) hint.style.display=admin?'block':'none';
 }
 
 function el(id){return document.getElementById(id);}
 
 // ── NAV ──
 const TITLES={dashboard:'Dashboard',equipment:'Equipment & Calibration',completed:'Completed Jobs',
-  customers:'Customer Database',
+  customers:'Customer Database',deleted:'Deleted Jobs',
   'my-jobs':'My Jobs',approval:'Approval Queue',tests:'Test Requests & Results',
   documents:'Document Control',capa:'Nonconformance & CAPA','ref-eq':'Lab Reference Equipment',
   personnel:'Personnel',reports:'Reports & Audit Logs',settings:'Settings'};
@@ -1788,6 +1818,7 @@ function showView(name){
   if(name==='completed') renderCompletedJobs();
   if(name==='customers') renderCustomerTable();
   if(name==='personnel') renderPersonnel();
+  if(name==='deleted') renderDeletedJobs();
   if(name==='my-jobs') renderMyJobs();
   if(name==='approval') renderApprovalQueue();
   if(name==='dashboard') renderDashboard();
@@ -1820,7 +1851,7 @@ function applySettings(s){
   Object.entries(map).forEach(([k,id])=>{const e=document.getElementById(id);if(e&&s[k]!==undefined)e.value=s[k];});
   // Show edit hint for admin
   const hint=document.getElementById('sidebar-edit-hint');
-  if(hint) hint.style.display=currentUser==='admin'?'block':'none';
+  if(hint) hint.style.display=isAdmin(currentUser)?'block':'none';
 }
 async function saveSettings(){
   const s=Object.assign({},_settings);
@@ -1941,7 +1972,7 @@ function removeExcel(){
 
 // ── OPEN NEW JOB MODAL ──
 async function openNewJobModal(){
-  if(currentUser!=='admin'){alert('Only admin can create new jobs.');return;}
+  if(getUserRole(currentUser)!=='Admin'){alert('Only admin can create new jobs.');return;}
   currentPhotos=[]; renderPhotoPreviews();
   el('eq-job-no').value='Generating…';
   el('eq-cert-no-preview').value='Generating…';
@@ -2085,12 +2116,29 @@ async function saveEditJob(){
   alert('✅ Job updated successfully!');
 }
 let assigningJobNo=null;
+// ── POPULATE USER DROPDOWNS ──
+function populateUserDropdown(selectId, includeAdmin=false){
+  const sel=el(selectId); if(!sel)return;
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Select user —</option>';
+  if(includeAdmin){
+    const adminUser=_settings.username||'admin';
+    sel.innerHTML+=`<option value="${adminUser}">Administrator</option>`;
+  }
+  (_staff||[]).filter(s=>s.active!==false).forEach(s=>{
+    sel.innerHTML+=`<option value="${s.username}">${s.name} (${s.role==='Signatory'?'Approved Signatory':'Engineer / Technician'})</option>`;
+  });
+  if(current) sel.value=current;
+}
+
 function openAssignModal(jobNo){
-  if(currentUser!=='admin'){alert('Only admin can assign jobs.');return;}
+  const role=getUserRole(currentUser);
+  if(role!=='Admin'&&role!=='Signatory'){alert('You do not have permission to assign jobs.');return;}
   assigningJobNo=jobNo;
   const j=getJob(jobNo);
   el('assign-job-no-label').textContent=jobNo;
   el('assign-job-eq-label').textContent=j?j.eqName:'';
+  populateUserDropdown('assign-to-select',false);
   el('assign-to-select').value=j&&j.assignedTo?j.assignedTo:'';
   el('assign-note').value='';
   openModal('modal-assign-job');
@@ -2115,6 +2163,7 @@ function openReassignModal(jobNo){
   const j=getJob(jobNo);
   el('reassign-job-no-label').textContent=jobNo;
   el('reassign-job-eq-label').textContent=j?j.eqName:'';
+  populateUserDropdown('reassign-to-select',true);
   el('reassign-to-select').value='';
   el('reassign-note').value='';
   openModal('modal-reassign-job');
@@ -2129,7 +2178,7 @@ async function confirmReassign(){
     j.history.push({action:`Re-assigned from ${USERS[from]?.name||from||'?'} to ${USERS[to]?.name||to}`,by:currentUser,time:new Date().toISOString(),note});
   });
   closeModal('modal-reassign-job');
-  renderMyJobs(); renderDashboard(); refreshAllBadges();
+  renderEquipmentTable(); renderMyJobs(); renderDashboard(); refreshAllBadges();
   addAudit('🔄',`Job <strong>${reassigningJobNo}</strong> re-assigned to <strong>${USERS[to]?.name||to}</strong>`);
 }
 
@@ -2427,7 +2476,7 @@ const PB={Urgent:'badge-red',Express:'badge-amber',Normal:'badge-blue',Routine:'
 const STATUS_BADGE={Unassigned:'badge-amber',Assigned:'badge-blue','In Progress':'badge-blue','Pending Approval':'badge-purple',Completed:'badge-green'};
 
 function renderEquipmentTable(){
-  const list=_jobs;
+  const list=_jobs.filter(j=>j.status!=="Deleted");
   const q=(el('eq-search')?.value||'').toLowerCase();
   const sf=el('eq-filter-status')?.value||'';
   const tbody=el('equipment-tbody'); if(!tbody)return;
@@ -2441,15 +2490,26 @@ function renderEquipmentTable(){
   } else {
     tbody.innerHTML=filtered.map(j=>{
       const assignedName=j.assignedTo?USERS[j.assignedTo]?.name||j.assignedTo:'—';
+      const role=getUserRole(currentUser);
       let actions='';
-      if(currentUser==='admin' && j.status==='Unassigned')
+      // Admin: assign unassigned jobs
+      if(role==='Admin' && j.status==='Unassigned')
         actions+=`<button class="btn btn-primary btn-sm" onclick="openAssignModal('${j.jobNo}')">Assign</button> `;
-      if(currentUser==='admin' && j.status!=='Unassigned' && j.status!=='Completed')
+      // Admin: re-assign active jobs
+      if(role==='Admin' && j.status!=='Unassigned' && j.status!=='Completed')
         actions+=`<button class="btn btn-outline btn-sm" onclick="openAssignModal('${j.jobNo}')">Re-assign</button> `;
+      // Signatory: can also assign unassigned jobs
+      if(role==='Signatory' && j.status==='Unassigned')
+        actions+=`<button class="btn btn-primary btn-sm" onclick="openAssignModal('${j.jobNo}')">Assign</button> `;
+      // Signatory: can re-assign active jobs
+      if(role==='Signatory' && j.status!=='Unassigned' && j.status!=='Completed')
+        actions+=`<button class="btn btn-outline btn-sm" onclick="openAssignModal('${j.jobNo}')">Re-assign</button> `;
+      // All can view
       actions+=`<button class="btn btn-outline btn-sm" onclick="viewJobDetail('${j.jobNo}')">View</button>`;
       if(j.status==='Completed'&&j.calData)
         actions+=` <button class="btn btn-outline btn-sm" onclick="showCertFromJob('${j.jobNo}')" title="View Certificate">📄</button>`;
-      if(currentUser==='admin')
+      // Admin only: delete
+      if(role==='Admin')
         actions+=` <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.jobNo}')" title="Delete Job">🗑</button>`;
       return `<tr>
         <td><span style="font-family:'DM Mono';font-size:12px;font-weight:600;">${j.jobNo}</span></td>
@@ -2474,16 +2534,18 @@ function renderEquipmentTable(){
   el('eq-count-sub').textContent=`${t} total jobs`;
 }
 
-// ── RENDER MY JOBS (Technician) ──
+// ── RENDER MY JOBS ──
 function renderMyJobs(){
   const list=_jobs.filter(j=>j.assignedTo===currentUser);
   const container=el('my-jobs-list'); if(!container)return;
+  const role=getUserRole(currentUser);
   el('my-jobs-title').textContent=`My Jobs — ${USERS[currentUser]?.name||currentUser}`;
   el('my-jobs-sub').textContent=`${list.length} job(s) assigned to you`;
   if(!list.length){
     container.innerHTML=`<div class="empty-state"><div class="empty-icon">🎉</div><p>No jobs assigned to you right now.</p></div>`;
     return;
   }
+  const approverName=Object.entries(USERS).find(([,u])=>u.role==='Signatory')?.[1]?.name||'Approver';
   container.innerHTML=list.map(j=>`
     <div class="approval-card ${j.priority==='Urgent'||j.priority==='Express'?'urgent':''}">
       <div class="approval-card-header">
@@ -2493,16 +2555,15 @@ function renderMyJobs(){
       <div class="approval-card-meta">
         Customer: <strong>${j.custName}</strong> &nbsp;·&nbsp; ${j.company||''} &nbsp;·&nbsp;
         Priority: <strong>${j.priority}</strong> &nbsp;·&nbsp; Received: ${j.receiveDate||'—'}
-        ${j.assignNote?`<br/>📝 Note from Admin: <em>"${j.assignNote}"</em>`:''}
+        ${j.assignNote?`<br/>📝 Note: <em>"${j.assignNote}"</em>`:''}
         ${j.approvalComments&&j.status==='Assigned'?`<br/><span style="color:var(--red);">✗ Rejected: <em>"${j.approvalComments}"</em></span>`:''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-outline btn-sm" onclick="viewJobDetail('${j.jobNo}')">👁 View Details</button>
-        <button class="btn btn-outline btn-sm" onclick="openReassignModal('${j.jobNo}')">🔄 Re-assign</button>
         ${j.status!=='Pending Approval'&&j.status!=='Completed'?
           `<button class="btn btn-primary btn-sm" onclick="openCalModal('${j.jobNo}')">🔬 Perform Calibration</button>`:''}
         ${j.status==='Pending Approval'?
-          `<span style="font-size:12px;color:var(--purple);font-weight:600;padding:5px;">📬 Awaiting Jay's approval…</span>`:''}
+          `<span style="font-size:12px;color:var(--purple);font-weight:600;padding:5px;">📬 Awaiting approval…</span>`:''}
         ${j.status==='Completed'&&j.calData?
           `<button class="btn btn-outline btn-sm" onclick="showCertFromJob('${j.jobNo}')">📄 View Certificate</button>`:''}
         ${j.status==='Completed'?
@@ -2597,13 +2658,13 @@ function viewJobDetail(jobNo){
   `;
   // Footer actions in view modal
   let footerBtns='';
-  if(currentUser==='admin')
+  if(isAdmin(currentUser))
     footerBtns+=`<button class="btn btn-amber" onclick="closeModal('modal-view-job');openEditJobModal('${j.jobNo}')">✏️ Edit Job</button>`;
-  if(currentUser==='admin'&&j.status==='Unassigned')
+  if(isAdmin(currentUser)&&j.status==='Unassigned')
     footerBtns+=`<button class="btn btn-primary" onclick="closeModal('modal-view-job');openAssignModal('${j.jobNo}')">Assign Job</button>`;
   if((currentUser===j.assignedTo)&&j.status!=='Pending Approval'&&j.status!=='Completed')
     footerBtns+=`<button class="btn btn-primary" onclick="closeModal('modal-view-job');openCalModal('${j.jobNo}')">🔬 Perform Calibration</button>`;
-  if(currentUser==='jay'&&j.status==='Pending Approval')
+  if(getUserRole(currentUser)==='Signatory'&&j.status==='Pending Approval')
     footerBtns+=`<button class="btn btn-success" onclick="closeModal('modal-view-job');openApproveModal('${j.jobNo}')">✅ Review &amp; Approve</button>`;
   if(j.status==='Completed'&&j.calData)
     footerBtns+=`<button class="btn btn-outline" onclick="showCertFromJob('${j.jobNo}')">📄 View Certificate</button>`;
@@ -2614,11 +2675,15 @@ function viewJobDetail(jobNo){
 async function deleteJob(jobNo){
   const j=getJob(jobNo);
   const warn=j&&j.status!=='Unassigned'
-    ? `⚠️ Job ${jobNo} is currently "${j.status}". Are you sure you want to permanently delete it? This cannot be undone.`
-    : `Delete job ${jobNo}? This cannot be undone.`;
+    ? `⚠️ Job ${jobNo} is currently "${j.status}". Are you sure you want to delete it? It will be moved to Deleted Jobs.`
+    : `Delete job ${jobNo}? It will be moved to Deleted Jobs.`;
   if(!confirm(warn)) return;
-  await SB.delete('wl_jobs',jobNo);
-  _jobs=_jobs.filter(j=>j.jobNo!==jobNo);
+  await updateJob(jobNo,j=>{
+    j.status='Deleted';
+    j.deletedAt=new Date().toISOString();
+    j.deletedBy=currentUser;
+    j.history.push({action:'🗑 Deleted by admin',by:currentUser,time:new Date().toISOString()});
+  });
   renderEquipmentTable(); renderDashboard(); refreshAllBadges();
   addAudit('🗑',`Job <strong>${jobNo}</strong> deleted by admin`);
 }
@@ -2630,7 +2695,7 @@ async function updateJob(jobNo,fn){
   if(j){ fn(j); await SB.upsert('wl_jobs',jobNo,j); }
 }
 function renderDashboard(){
-  const list=_jobs;
+  const list=_jobs.filter(j=>j.status!=="Deleted");
   const total=list.length;
   const unassigned=list.filter(j=>j.status==='Unassigned').length;
   const inprog=list.filter(j=>j.status==='Assigned'||j.status==='In Progress').length;
@@ -2647,7 +2712,7 @@ function renderDashboard(){
   el('ov-approval').textContent=pendApproval; el('pb-approval').style.width=pct(pendApproval)+'%';
   el('ov-done').textContent=completed; el('pb-done').style.width=pct(completed)+'%';
   // Banners
-  if(currentUser==='jay'){
+  if(getUserRole(currentUser)==='Signatory'){
     el('jay-approval-banner').style.display=pendApproval>0?'block':'none';
     el('jay-approval-count-text').textContent=`${pendApproval} job(s) awaiting your approval.`;
   } else {
@@ -2660,7 +2725,7 @@ function renderDashboard(){
 
 // ── BADGES ──
 function refreshAllBadges(){
-  const list=_jobs;
+  const list=_jobs.filter(j=>j.status!=="Deleted");
   const myCount=currentUser?list.filter(j=>j.assignedTo===currentUser&&j.status!=='Completed'&&j.status!=='Pending Approval').length:0;
   const approvalCount=list.filter(j=>j.status==='Pending Approval').length;
   const mb=el('my-jobs-badge');
@@ -3030,8 +3095,8 @@ function renderRefEqTable(){
     <td><strong style="color:${r.calStatus==='Overdue'?'var(--red)':r.calStatus==='Due Soon'?'var(--amber)':'var(--green)'}">${r.dueDate||'—'}</strong></td>
     <td><span class="badge ${SB2[r.calStatus]||'badge-slate'}">${r.calStatus}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="viewRefEq('${r.id}')">View</button>
-        ${currentUser==='admin'?`<button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openEditRefEqModal('${r.id}')">✏️</button>`:''}
-        ${currentUser==='admin'?`<button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteRefEq('${r.id}')">🗑</button>`:''}</td>
+        ${isAdmin(currentUser)?`<button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openEditRefEqModal('${r.id}')">✏️</button>`:''}
+        ${isAdmin(currentUser)?`<button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteRefEq('${r.id}')">🗑</button>`:''}</td>
   </tr>`).join('');
 }
 function viewRefEq(id){
@@ -3047,10 +3112,10 @@ function viewRefEq(id){
     <table style="width:100%;">${row('Traceability',r.traceability)}${row('Certificate No.',r.certNo)}${row('Last Calibration',r.lastCal)}${row('Due Date','<strong style="color:'+(st==='Overdue'?'var(--red)':st==='Due Soon'?'var(--amber)':'var(--green)')+'">'+r.dueDate+'</strong>')}${row('Status','<span class="badge '+SB2[st]+'">'+st+'</span>')}${row('Calibrated By',r.calBy)}</table>
     ${r.remarks?`<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:13px;"><strong>Remarks:</strong> ${r.remarks}</div>`:''}`;
   el('del-ref-eq-btn').onclick=()=>{closeModal('modal-view-ref-eq');deleteRefEq(id);};
-  el('del-ref-eq-btn').style.display=currentUser==='admin'?'':'none';
+  el('del-ref-eq-btn').style.display=isAdmin(currentUser)?'':'none';
   const editBtn=el('edit-ref-eq-btn');
   if(editBtn){
-    editBtn.style.display=currentUser==='admin'?'':'none';
+    editBtn.style.display=isAdmin(currentUser)?'':'none';
     editBtn.onclick=()=>{closeModal('modal-view-ref-eq');openEditRefEqModal(id);};
   }
   openModal('modal-view-ref-eq');
@@ -3339,7 +3404,7 @@ function renderCompletedJobs(){
       :`<span class="badge badge-amber">⏳ Pending</span>`}</td>
     <td style="white-space:nowrap;">
       <button class="btn btn-outline btn-sm" onclick="showCertFromJob('${j.jobNo}')">📄 Cert</button>
-      ${!j.billed&&currentUser==='admin'
+      ${!j.billed&&isAdmin(currentUser)
         ?`<button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="markBilled('${j.jobNo}')">💰 Billing</button>`
         :''}
     </td>
@@ -3358,11 +3423,36 @@ async function markBilled(jobNo){
   addAudit('💰',`Job <strong>${jobNo}</strong> marked for billing`);
 }
 
+// ── DELETED JOBS ──
+function renderDeletedJobs(){
+  const list=_jobs.filter(j=>j.status==='Deleted');
+  const q=(el('deleted-search')?.value||'').toLowerCase();
+  const tbody=el('deleted-tbody'); if(!tbody)return;
+  const filtered=list.filter(j=>
+    !q||j.jobNo.toLowerCase().includes(q)||
+    (j.custName||'').toLowerCase().includes(q)||
+    (j.eqName||'').toLowerCase().includes(q)
+  ).sort((a,b)=>new Date(b.deletedAt||0)-new Date(a.deletedAt||0));
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗑️</div><p>${list.length?'No matching records.':'No deleted jobs.'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=filtered.map(j=>`<tr style="opacity:0.75;">
+    <td><span style="font-family:'DM Mono';font-size:12px;font-weight:600;text-decoration:line-through;">${j.jobNo}</span></td>
+    <td><span style="font-size:12px;color:var(--text-muted);">${j.certNo||'—'}</span></td>
+    <td>${j.custName||'—'}</td>
+    <td>${j.eqName||'—'}</td>
+    <td><span class="badge badge-slate">${j.deletedAt?'Was: '+((j.history||[]).find(h=>h.action?.includes('Deleted'))?.action||'Deleted'):'Deleted'}</span></td>
+    <td>${USERS[j.deletedBy]?.name||j.deletedBy||'Admin'}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${j.deletedAt?j.deletedAt.split('T')[0]:'—'}</td>
+  </tr>`).join('');
+}
+
 // ── PERSONNEL MANAGEMENT ──
 const ROLE_DISPLAY={
-  Admin:{label:'System Admin',access:'Full access — create, assign, manage all',badge:'badge-green'},
-  Approver:{label:'Senior Technician & Approver',access:'View all, perform calibration, approve jobs',badge:'badge-purple'},
-  Technician:{label:'Calibration Technician',access:'View own jobs, perform calibration, re-assign',badge:'badge-blue'}
+  Admin:{label:'Administrator',access:'Full access — create jobs, assign, manage all, delete, settings',badge:'badge-green'},
+  Signatory:{label:'Approved Signatory',access:'Assign jobs, view all jobs (no amend), perform calibration, approve/reject',badge:'badge-purple'},
+  Engineer:{label:'Engineer / Technician',access:'View all jobs (no amend), perform calibration only',badge:'badge-blue'}
 };
 
 function renderPersonnel(){
@@ -3375,7 +3465,7 @@ function renderPersonnel(){
   // Staff rows
   (_staff||[]).forEach(s=>rows.push({...s,isAdmin:false}));
   tbody.innerHTML=rows.map(u=>{
-    const rd=ROLE_DISPLAY[u.role]||ROLE_DISPLAY.Technician;
+    const rd=ROLE_DISPLAY[u.role]||ROLE_DISPLAY.Engineer;
     return `<tr>
       <td><strong>${u.name}</strong></td>
       <td><span style="font-family:'DM Mono';font-size:12px;">${u.username}</span></td>
@@ -3399,7 +3489,7 @@ function openAddStaffModal(){
   el('staff-name').value='';
   el('staff-username').value='';
   el('staff-username').readOnly=false;
-  el('staff-role').value='Technician';
+  el('staff-role').value='Engineer';
   el('staff-password').value='';
   el('staff-password2').value='';
   el('staff-pw-label').innerHTML='Password <span class="req">*</span>';
@@ -3414,7 +3504,7 @@ function openEditStaffModal(username){
   el('staff-name').value=s.name||'';
   el('staff-username').value=username;
   el('staff-username').readOnly=true;
-  el('staff-role').value=s.role||'Technician';
+  el('staff-role').value=s.role||'Engineer';
   el('staff-password').value='';
   el('staff-password2').value='';
   el('staff-pw-label').innerHTML='New Password <span style="font-size:11px;color:var(--text-muted);">(leave blank to keep current)</span>';
@@ -3429,7 +3519,7 @@ function openResetPwModal(username){
   el('staff-name').value=s.name||'';
   el('staff-username').value=username;
   el('staff-username').readOnly=true;
-  el('staff-role').value=s.role||'Technician';
+  el('staff-role').value=s.role||'Engineer';
   el('staff-password').value='';
   el('staff-password2').value='';
   el('staff-pw-label').innerHTML='New Password <span class="req">*</span>';
@@ -3462,7 +3552,7 @@ async function saveStaff(){
   const existing=_staff.find(s=>s.username===(isEdit?editUsername:username));
   const record={
     username,name,
-    display:role==='Approver'?'Senior Technician & Approver':'Calibration Technician',
+    display:role==='Signatory'?'Approved Signatory':'Engineer / Technician',
     role,
     password:pw||(existing?.password||''),
     active:existing?.active!==false,
