@@ -769,8 +769,8 @@ textarea.form-control{resize:vertical;min-height:70px;}
             <div class="form-group"><label class="form-label">Branch / Location</label><input id="set-branch" class="form-control" placeholder="e.g. Selangor Branch"/></div>
             <div class="form-group"><label class="form-label">Company Address</label><textarea id="set-address" class="form-control" rows="3" placeholder="Full company address"></textarea></div>
             <div class="form-row">
-              <div class="form-group"><label class="form-label">Tel No.</label><input id="set-tel" class="form-control" placeholder="+60-3-XXXX XXXX"/></div>
-              <div class="form-group"><label class="form-label">Fax No.</label><input id="set-fax" class="form-control" placeholder="+60-3-XXXX XXXX"/></div>
+              <div class="form-group"><label class="form-label">Tel No.</label><input id="set-tel" class="form-control" placeholder="e.g. +603-6157 0706"/></div>
+              <div class="form-group"><label class="form-label">Fax No.</label><input id="set-fax" class="form-control" placeholder="e.g. +603-6157 0706"/></div>
             </div>
             <div class="form-row">
               <div class="form-group"><label class="form-label">Email</label><input id="set-email" class="form-control" type="email" placeholder="info@westlab.com"/></div>
@@ -865,9 +865,9 @@ textarea.form-control{resize:vertical;min-height:70px;}
       </div>
       <div class="form-group"><label class="form-label">Company Address</label><textarea class="form-control" id="eq-address" placeholder="Full mailing address"></textarea></div>
       <div class="form-row-3">
-        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="eq-tel" placeholder="+60-3-XXXX XXXX"/></div>
-        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="eq-mobile" placeholder="+60-1X-XXXX XXXX"/></div>
-        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="eq-fax" placeholder="+60-3-XXXX XXXX"/></div>
+        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="eq-tel" placeholder="e.g. +603-6157 0706"/></div>
+        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="eq-mobile" placeholder="e.g. +6016-123 4573 or +6011-1172 7492"/></div>
+        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="eq-fax" placeholder="e.g. +603-6157 0706"/></div>
       </div>
       <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="eq-email" type="email" placeholder="customer@company.com"/></div>
       <div class="form-group"><label class="form-label">Priority <span class="req">*</span></label>
@@ -887,10 +887,13 @@ textarea.form-control{resize:vertical;min-height:70px;}
         <div class="form-group"><label class="form-label">Serial No.</label><input class="form-control" id="eq-serial" placeholder="Manufacturer S/N"/></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label class="form-label">Tag No. <span style="font-size:11px;color:var(--text-muted);">(Customer's asset tag — leave blank if none)</span></label><input class="form-control" id="eq-tag-no" placeholder="e.g. EQ-0012 or leave blank if N/A"/></div>
+        <div class="form-group"><label class="form-label">Specification / Tolerance</label><input class="form-control" id="eq-spec" placeholder="e.g. ±0.5°C"/></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Range / Capacity</label><input class="form-control" id="eq-range" placeholder="e.g. 0–200°C"/></div>
         <div class="form-group"><label class="form-label">Calibration Points</label><input class="form-control" id="eq-cal-points" placeholder="e.g. 0, 50, 100°C"/></div>
       </div>
-      <div class="form-group"><label class="form-label">Specification / Tolerance</label><input class="form-control" id="eq-spec" placeholder="e.g. ±0.5°C"/></div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Condition of Item <span class="req">*</span></label>
@@ -1239,11 +1242,11 @@ textarea.form-control{resize:vertical;min-height:70px;}
       <div class="form-group"><label class="form-label">Attention / Contact Person</label><input class="form-control" id="cust-attention" placeholder="e.g. Mr. Ahmad"/></div>
       <div class="form-group"><label class="form-label">Company Address</label><textarea class="form-control" id="cust-address" placeholder="Full mailing address"></textarea></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="cust-tel" placeholder="+60-3-XXXX XXXX"/></div>
-        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="cust-mobile" placeholder="+60-1X-XXXX XXXX"/></div>
+        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="cust-tel" placeholder="e.g. +603-6157 0706"/></div>
+        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="cust-mobile" placeholder="e.g. +6016-123 4573 or +6011-1172 7492"/></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="cust-fax" placeholder="+60-3-XXXX XXXX"/></div>
+        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="cust-fax" placeholder="e.g. +603-6157 0706"/></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="cust-email" type="email" placeholder="info@company.com"/></div>
       </div>
       <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="cust-notes" placeholder="Any additional notes about this customer…"></textarea></div>
@@ -1760,7 +1763,7 @@ async function openNewJobModal(){
   const suggBox=el('customer-suggestions');
   if(suggBox) suggBox.style.display='none';
   ['eq-attention','eq-company','eq-address','eq-tel','eq-mobile','eq-fax',
-   'eq-email','eq-po','eq-name','eq-brand','eq-model','eq-serial','eq-range',
+   'eq-email','eq-po','eq-name','eq-brand','eq-model','eq-serial','eq-tag-no','eq-range',
    'eq-cal-points','eq-spec','eq-accessories','eq-remarks','eq-condition-other'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';});
   openModal('modal-add-equipment');
@@ -1791,7 +1794,8 @@ async function saveEquipment(){
     fax:el('eq-fax').value.trim(), email:el('eq-email').value.trim(),
     po:el('eq-po').value.trim(), priority:el('eq-priority').value,
     eqName, brand:el('eq-brand').value.trim(), model:el('eq-model').value.trim(),
-    serial:el('eq-serial').value.trim(), range:el('eq-range').value.trim(),
+    serial:el('eq-serial').value.trim(), tagNo:el('eq-tag-no').value.trim(),
+    range:el('eq-range').value.trim(),
     calPoints:el('eq-cal-points').value.trim(), spec:el('eq-spec').value.trim(),
     condition:cond==='Others'?condOther:cond,
     accessories:el('eq-accessories').value.trim(),
@@ -1917,6 +1921,8 @@ async function openCalModal(jobNo){
   el('cal-result').value='';
   el('cal-cond-before').value='Good Physical Condition.';
   el('cal-cond-after').value='Calibrated as Requested by Customer.';
+  // Auto-fill tag number from job — N/A if customer didn't provide one
+  el('cal-tag-no').value=j&&j.tagNo?j.tagNo:'N/A';
   // Reset traceability rows
   const tr=el('trace-rows');
   if(tr){ const rows=tr.querySelectorAll('.trace-row'); rows.forEach((r,i)=>{r.querySelectorAll('input').forEach(inp=>inp.value='');}); }
