@@ -1229,6 +1229,73 @@ textarea.form-control{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- EDIT JOB (Admin) -->
+<div class="modal-overlay" id="modal-edit-job">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">✏️ Edit Job — <span id="edit-job-no-label"></span></span>
+      <button class="modal-close" onclick="closeModal('modal-edit-job')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section-title">👤 Customer Information</div>
+      <div class="form-group"><label class="form-label">Customer / Company Name <span class="req">*</span></label><input class="form-control" id="edit-eq-company" placeholder="e.g. Acme Sdn Bhd"/></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Attention / Contact Person</label><input class="form-control" id="edit-eq-attention" placeholder="Attn: person name"/></div>
+        <div class="form-group"><label class="form-label">PO Number</label><input class="form-control" id="edit-eq-po" placeholder="Purchase order no."/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Company Address</label><textarea class="form-control" id="edit-eq-address" placeholder="Full mailing address"></textarea></div>
+      <div class="form-row-3">
+        <div class="form-group"><label class="form-label">Tel No.</label><input class="form-control" id="edit-eq-tel" placeholder="e.g. +603-6157 0706"/></div>
+        <div class="form-group"><label class="form-label">Mobile No.</label><input class="form-control" id="edit-eq-mobile" placeholder="e.g. +6016-123 4573"/></div>
+        <div class="form-group"><label class="form-label">Fax No.</label><input class="form-control" id="edit-eq-fax" placeholder="e.g. +603-6157 0706"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="edit-eq-email" type="email" placeholder="customer@company.com"/></div>
+        <div class="form-group"><label class="form-label">Receiving Date</label><input class="form-control" id="edit-eq-receive-date" type="date"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Priority</label>
+        <select class="form-control" id="edit-eq-priority">
+          <option value="Normal">Normal</option><option value="Urgent">Urgent</option>
+          <option value="Express">Express</option><option value="Routine">Routine</option>
+        </select>
+      </div>
+
+      <div class="form-section-title" style="margin-top:6px;">🔩 Equipment Details</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Equipment Name <span class="req">*</span></label><input class="form-control" id="edit-eq-name" placeholder="e.g. Digital Thermometer"/></div>
+        <div class="form-group"><label class="form-label">Brand / Manufacturer</label><input class="form-control" id="edit-eq-brand" placeholder="e.g. Fluke"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Model</label><input class="form-control" id="edit-eq-model" placeholder="Model number"/></div>
+        <div class="form-group"><label class="form-label">Serial No.</label><input class="form-control" id="edit-eq-serial" placeholder="Manufacturer S/N"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tag No. <span style="font-size:11px;color:var(--text-muted);">(Customer's asset tag)</span></label><input class="form-control" id="edit-eq-tag-no" placeholder="e.g. EQ-0012 or leave blank if N/A"/></div>
+        <div class="form-group"><label class="form-label">Specification / Tolerance</label><input class="form-control" id="edit-eq-spec" placeholder="e.g. ±0.5°C"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Range / Capacity</label><input class="form-control" id="edit-eq-range" placeholder="e.g. 0–200°C"/></div>
+        <div class="form-group"><label class="form-label">Calibration Points</label><input class="form-control" id="edit-eq-cal-points" placeholder="e.g. 0, 50, 100°C"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Condition of Item</label>
+          <select class="form-control" id="edit-eq-condition">
+            <option value="Good">Good</option><option value="Fair">Fair</option>
+            <option value="Damaged">Damaged</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Accessories</label><input class="form-control" id="edit-eq-accessories" placeholder="e.g. power adapter, manual"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Remarks</label><textarea class="form-control" id="edit-eq-remarks" placeholder="Special instructions…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-job')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditJob()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD / EDIT CUSTOMER -->
 <div class="modal-overlay" id="modal-add-customer">
   <div class="modal">
@@ -1827,7 +1894,71 @@ async function saveEquipment(){
   }
 }
 
-// ── ASSIGN JOB ──
+// ── EDIT JOB (Admin) ──
+let _editingJobNo=null;
+function openEditJobModal(jobNo){
+  const j=getJob(jobNo); if(!j)return;
+  _editingJobNo=jobNo;
+  el('edit-job-no-label').textContent=jobNo;
+  // Customer fields
+  el('edit-eq-company').value=j.company||j.custName||'';
+  el('edit-eq-attention').value=j.attention||'';
+  el('edit-eq-po').value=j.po||'';
+  el('edit-eq-address').value=j.address||'';
+  el('edit-eq-tel').value=j.tel||'';
+  el('edit-eq-mobile').value=j.mobile||'';
+  el('edit-eq-fax').value=j.fax||'';
+  el('edit-eq-email').value=j.email||'';
+  el('edit-eq-receive-date').value=j.receiveDate||'';
+  el('edit-eq-priority').value=j.priority||'Normal';
+  // Equipment fields
+  el('edit-eq-name').value=j.eqName||'';
+  el('edit-eq-brand').value=j.brand||'';
+  el('edit-eq-model').value=j.model||'';
+  el('edit-eq-serial').value=j.serial||'';
+  el('edit-eq-tag-no').value=j.tagNo||'';
+  el('edit-eq-spec').value=j.spec||'';
+  el('edit-eq-range').value=j.range||'';
+  el('edit-eq-cal-points').value=j.calPoints||'';
+  el('edit-eq-condition').value=j.condition||'Good';
+  el('edit-eq-accessories').value=j.accessories||'';
+  el('edit-eq-remarks').value=j.remarks||'';
+  openModal('modal-edit-job');
+}
+async function saveEditJob(){
+  const company=el('edit-eq-company').value.trim();
+  const eqName=el('edit-eq-name').value.trim();
+  if(!company){alert('Customer / Company name is required.');return;}
+  if(!eqName){alert('Equipment name is required.');return;}
+  await updateJob(_editingJobNo,j=>{
+    j.company=company; j.custName=company;
+    j.attention=el('edit-eq-attention').value.trim();
+    j.po=el('edit-eq-po').value.trim();
+    j.address=el('edit-eq-address').value.trim();
+    j.tel=el('edit-eq-tel').value.trim();
+    j.mobile=el('edit-eq-mobile').value.trim();
+    j.fax=el('edit-eq-fax').value.trim();
+    j.email=el('edit-eq-email').value.trim();
+    j.receiveDate=el('edit-eq-receive-date').value;
+    j.priority=el('edit-eq-priority').value;
+    j.eqName=eqName;
+    j.brand=el('edit-eq-brand').value.trim();
+    j.model=el('edit-eq-model').value.trim();
+    j.serial=el('edit-eq-serial').value.trim();
+    j.tagNo=el('edit-eq-tag-no').value.trim();
+    j.spec=el('edit-eq-spec').value.trim();
+    j.range=el('edit-eq-range').value.trim();
+    j.calPoints=el('edit-eq-cal-points').value.trim();
+    j.condition=el('edit-eq-condition').value;
+    j.accessories=el('edit-eq-accessories').value.trim();
+    j.remarks=el('edit-eq-remarks').value.trim();
+    j.history.push({action:'Job details edited by admin',by:currentUser,time:new Date().toISOString()});
+  });
+  closeModal('modal-edit-job');
+  renderEquipmentTable(); renderDashboard();
+  addAudit('✏️',`Job <strong>${_editingJobNo}</strong> edited by admin`);
+  alert('✅ Job updated successfully!');
+}
 let assigningJobNo=null;
 function openAssignModal(jobNo){
   if(currentUser!=='admin'){alert('Only admin can assign jobs.');return;}
@@ -2246,6 +2377,8 @@ function viewJobDetail(jobNo){
   `;
   // Footer actions in view modal
   let footerBtns='';
+  if(currentUser==='admin')
+    footerBtns+=`<button class="btn btn-amber" onclick="closeModal('modal-view-job');openEditJobModal('${j.jobNo}')">✏️ Edit Job</button>`;
   if(currentUser==='admin'&&j.status==='Unassigned')
     footerBtns+=`<button class="btn btn-primary" onclick="closeModal('modal-view-job');openAssignModal('${j.jobNo}')">Assign Job</button>`;
   if((currentUser===j.assignedTo)&&j.status!=='Pending Approval'&&j.status!=='Completed')
