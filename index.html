@@ -1785,6 +1785,7 @@ async function saveEquipment(){
     certNo, // stored on the job from day 1
     receiveDate:el('eq-receive-date').value,
     custName:company, company,
+    address:el('eq-address').value.trim(),
     attention:el('eq-attention').value.trim(),
     tel:el('eq-tel').value.trim(), mobile:el('eq-mobile').value.trim(),
     fax:el('eq-fax').value.trim(), email:el('eq-email').value.trim(),
@@ -1889,7 +1890,11 @@ async function openCalModal(jobNo){
   // Auto-fill from job
   el('cal-issued-to').value=j?[j.custName,j.company].filter((v,i,a)=>a.indexOf(v)===i).join('\n').trim():'';
   el('cal-issued-by').value=s.labName||'Westlab';
-  el('cal-cust-addr').value=j?j.address||'':'';
+  // Customer address — from job directly, or fall back to customer DB
+  const custAddr=j&&j.address
+    ? j.address
+    : (_customers.find(c=>c.company===j?.company)?.address||'');
+  el('cal-cust-addr').value=custAddr;
   el('cal-lab-addr').value=s.address||'';
   el('cal-eq-name').value=j?j.eqName:'';
   el('cal-brand').value=j?j.brand:'';
