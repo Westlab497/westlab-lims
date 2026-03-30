@@ -415,10 +415,21 @@ textarea.form-control{resize:vertical;min-height:70px;}
     </div>
     <button class="btn btn-primary" id="login-btn" style="width:100%;padding:11px;font-size:14px;margin-top:6px;" onclick="doLogin()">Sign In →</button>
     <div class="login-footer">
-      <strong>admin</strong> / westlab123 &nbsp;·&nbsp;
-      <strong>jay</strong> / jay123 &nbsp;·&nbsp;
-      <strong>edmund</strong> / edmund123
+      <a href="#" onclick="showForgotPassword()" style="color:var(--blue);text-decoration:none;font-size:12px;">Forgot password? Contact your administrator</a>
     </div>
+  </div>
+</div>
+
+<!-- ══ FORGOT PASSWORD PROMPT ══ -->
+<div id="forgot-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,31,61,.7);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:36px 32px;width:380px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.2);text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🔐</div>
+    <div style="font-weight:800;font-size:18px;color:var(--navy);margin-bottom:8px;">Forgot Password?</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Please contact your <strong>Administrator</strong> to reset your password.<br/>The admin can reset staff passwords from the <strong>Personnel</strong> page.</div>
+    <div style="background:var(--blue-pale);border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:var(--navy);">
+      💡 Admin can log in and go to:<br/><strong>Personnel → Reset Password</strong>
+    </div>
+    <button onclick="hideForgotPassword()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%;">OK, Got It</button>
   </div>
 </div>
 
@@ -771,17 +782,18 @@ textarea.form-control{resize:vertical;min-height:70px;}
 
     <!-- ════ PERSONNEL ════ -->
     <div class="view" id="view-personnel">
-      <div class="page-header"><div class="page-title">Personnel Management</div></div>
+      <div class="page-header">
+        <div><div class="page-title">👥 Personnel Management</div><div class="page-sub">Manage staff accounts and access</div></div>
+        <button class="btn btn-primary" onclick="openAddStaffModal()">+ Add Staff Account</button>
+      </div>
       <div class="card">
         <div class="card-header"><span class="card-title">User Accounts</span></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Access Level</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td>Administrator</td><td><span style="font-family:'DM Mono';">admin</span></td><td>System Admin</td><td>Full access — create, assign, manage all</td><td><span class="badge badge-green">Active</span></td></tr>
-            <tr><td>Jay</td><td><span style="font-family:'DM Mono';">jay</span></td><td>Senior Technician &amp; Approver</td><td>View all, perform calibration, approve jobs</td><td><span class="badge badge-purple">Active</span></td></tr>
-            <tr><td>Edmund</td><td><span style="font-family:'DM Mono';">edmund</span></td><td>Calibration Technician</td><td>View own jobs, perform calibration, re-assign</td><td><span class="badge badge-blue">Active</span></td></tr>
-          </tbody>
-        </table></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Access Level</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="personnel-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1373,6 +1385,42 @@ textarea.form-control{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- ADD / EDIT STAFF -->
+<div class="modal-overlay" id="modal-add-staff">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="staff-modal-title">👤 Add Staff Account</span>
+      <button class="modal-close" onclick="closeModal('modal-add-staff')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="staff-edit-username"/>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Full Name <span class="req">*</span></label><input class="form-control" id="staff-name" placeholder="e.g. Ahmad Bin Ali"/></div>
+        <div class="form-group"><label class="form-label">Username <span class="req">*</span></label><input class="form-control" id="staff-username" placeholder="e.g. ahmad" autocomplete="off"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Role <span class="req">*</span></label>
+        <select class="form-control" id="staff-role">
+          <option value="Technician">Calibration Technician</option>
+          <option value="Approver">Senior Technician &amp; Approver</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label" id="staff-pw-label">Password <span class="req">*</span></label>
+          <input class="form-control" id="staff-password" type="password" placeholder="Set password" autocomplete="new-password"/>
+        </div>
+        <div class="form-group"><label class="form-label">Confirm Password <span class="req">*</span></label>
+          <input class="form-control" id="staff-password2" type="password" placeholder="Confirm password" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:-8px;" id="staff-pw-hint"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-staff')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStaff()">💾 Save Account</button>
+    </div>
+  </div>
+</div>
+
 <!-- Simple modals -->
 <div class="modal-overlay" id="modal-add-test"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">New Test Request</span><button class="modal-close" onclick="closeModal('modal-add-test')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Client</label><input class="form-control"/></div><div class="form-group"><label class="form-label">Test Method</label><input class="form-control" placeholder="e.g. ASTM D1293"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-add-test')">Cancel</button><button class="btn btn-primary" onclick="closeModal('modal-add-test')">Submit</button></div></div></div>
 <div class="modal-overlay" id="modal-add-doc"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">New Document</span><button class="modal-close" onclick="closeModal('modal-add-doc')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Document ID</label><input class="form-control" placeholder="e.g. SOP-LAB-016"/></div><div class="form-group"><label class="form-label">Title</label><input class="form-control"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-add-doc')">Cancel</button><button class="btn btn-primary" onclick="closeModal('modal-add-doc')">Create</button></div></div></div>
@@ -1549,20 +1597,22 @@ const DEF={labName:'Westlab',accredNum:'WL-2024-0001',accredBody:'ILAC / A2LA',
   email:'lab@westlab.com',username:'admin',password:'westlab123'};
 
 // In-memory cache
-let _jobs=[], _refEq=[], _settings=Object.assign({},DEF), _customers=[];
+let _jobs=[], _refEq=[], _settings=Object.assign({},DEF), _customers=[], _staff=[];
 
 async function loadAll(){
   showLoadingOverlay(true);
   try{
-    const [jobs,refEq,settingsArr,customers]=await Promise.allSettled([
+    const [jobs,refEq,settingsArr,customers,staff]=await Promise.allSettled([
       SB.getAll('wl_jobs'),
       SB.getAll('wl_ref_equipment'),
       SB.getAll('wl_settings'),
-      SB.getAll('wl_customers')
+      SB.getAll('wl_customers'),
+      SB.getAll('wl_staff')
     ]);
     _jobs=(jobs.status==='fulfilled'?jobs.value:[])||[];
     _refEq=(refEq.status==='fulfilled'?refEq.value:[])||[];
     _customers=(customers.status==='fulfilled'?customers.value:[])||[];
+    _staff=(staff.status==='fulfilled'?staff.value:[])||[];
     const settingsArr2=settingsArr.status==='fulfilled'?settingsArr.value:[];
     if(settingsArr2&&settingsArr2[0]) _settings=Object.assign({},DEF,settingsArr2[0]);
   }catch(e){console.error('Supabase load error',e);}
@@ -1581,27 +1631,49 @@ function showLoadingOverlay(show){
   ov.style.display=show?'flex':'none';
 }
 
-// ── USERS ──
-const USERS={
-  admin:{name:'Administrator',display:'Administrator',avatarClass:'',password:'westlab123'},
-  jay:{name:'Jay',display:'Senior Technician & Approver',avatarClass:'jay',password:'jay123'},
-  edmund:{name:'Edmund',display:'Calibration Technician',avatarClass:'edmund',password:'edmund123'}
+// ── USERS (dynamic — loaded from Supabase + admin from settings) ──
+// Base USERS — will be extended with staff from wl_staff table
+let USERS={
+  admin:{name:'Administrator',display:'Administrator',avatarClass:'',role:'Admin',password:'westlab123'}
 };
+
+function rebuildUsers(){
+  // Start fresh with admin
+  const adminPw=_settings.password||'westlab123';
+  const adminUser=_settings.username||'admin';
+  USERS={};
+  USERS[adminUser]={name:'Administrator',display:'Administrator',avatarClass:'',role:'Admin',password:adminPw};
+  // Add staff from _staff array
+  (_staff||[]).forEach(s=>{
+    if(s.username&&s.username!==adminUser){
+      USERS[s.username]={
+        name:s.name, display:s.display||s.name,
+        avatarClass:s.username,
+        role:s.role, password:s.password,
+        active:s.active!==false
+      };
+    }
+  });
+}
 
 let currentUser=null;
 
 // ── LOGIN ──
+
 function doLogin(){
   const u=document.getElementById('login-username').value.trim().toLowerCase();
   const p=document.getElementById('login-password').value;
   const err=document.getElementById('login-error');
   err.style.display='none';
-  // Check against USERS (admin password may be overridden in _settings)
-  const adminPass=(_settings&&_settings.password)||USERS.admin.password;
-  const adminUser=(_settings&&_settings.username)||'admin';
-  if(u===adminUser.toLowerCase()&&p===adminPass){setCurrentUser('admin');return;}
-  if(u==='jay'&&p===USERS.jay.password){setCurrentUser('jay');return;}
-  if(u==='edmund'&&p===USERS.edmund.password){setCurrentUser('edmund');return;}
+  const match=USERS[u];
+  if(match&&p===match.password){
+    if(match.active===false){
+      err.textContent='Your account is inactive. Please contact your administrator.';
+      err.style.display='block'; return;
+    }
+    setCurrentUser(u); return;
+  }
+  err.textContent='Incorrect username or password. Please try again.';
   err.style.display='block';
   document.getElementById('login-password').value='';
 }
@@ -1649,6 +1721,7 @@ function doLogout(){
   try{
     await loadAll();
     applySettings(_settings);
+    rebuildUsers();
   }catch(e){
     console.error('Startup error:',e);
   }finally{
@@ -1714,6 +1787,7 @@ function showView(name){
   if(name==='equipment') renderEquipmentTable();
   if(name==='completed') renderCompletedJobs();
   if(name==='customers') renderCustomerTable();
+  if(name==='personnel') renderPersonnel();
   if(name==='my-jobs') renderMyJobs();
   if(name==='approval') renderApprovalQueue();
   if(name==='dashboard') renderDashboard();
@@ -1732,6 +1806,8 @@ function applySettings(s){
   ['sidebar-lab-name','sidebar-lab-label','login-lab-name'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=name;});
   const an=document.getElementById('sidebar-accred-num');if(an)an.textContent=s.accredNum||'';
   document.title=name+' — ISO 17025 Lab Management System';
+  // Rebuild users with updated admin credentials
+  if(typeof rebuildUsers==='function') rebuildUsers();
   // Fill all settings fields
   const map={
     labName:'set-lab-name', regNo:'set-reg-no', branch:'set-branch',
@@ -3280,6 +3356,147 @@ async function markBilled(jobNo){
   });
   renderCompletedJobs();
   addAudit('💰',`Job <strong>${jobNo}</strong> marked for billing`);
+}
+
+// ── PERSONNEL MANAGEMENT ──
+const ROLE_DISPLAY={
+  Admin:{label:'System Admin',access:'Full access — create, assign, manage all',badge:'badge-green'},
+  Approver:{label:'Senior Technician & Approver',access:'View all, perform calibration, approve jobs',badge:'badge-purple'},
+  Technician:{label:'Calibration Technician',access:'View own jobs, perform calibration, re-assign',badge:'badge-blue'}
+};
+
+function renderPersonnel(){
+  const tbody=el('personnel-tbody'); if(!tbody)return;
+  // Build list: admin first, then staff
+  const adminUser=_settings.username||'admin';
+  const rows=[];
+  // Admin row
+  rows.push({username:adminUser,name:'Administrator',role:'Admin',active:true,isAdmin:true});
+  // Staff rows
+  (_staff||[]).forEach(s=>rows.push({...s,isAdmin:false}));
+  tbody.innerHTML=rows.map(u=>{
+    const rd=ROLE_DISPLAY[u.role]||ROLE_DISPLAY.Technician;
+    return `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td><span style="font-family:'DM Mono';font-size:12px;">${u.username}</span></td>
+      <td>${rd.label}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${rd.access}</td>
+      <td><span class="badge ${u.active!==false?rd.badge:'badge-slate'}">${u.active!==false?'Active':'Inactive'}</span></td>
+      <td style="white-space:nowrap;">
+        ${u.isAdmin?'<span style="font-size:11px;color:var(--text-muted);">Manage in Settings</span>':`
+          <button class="btn btn-outline btn-sm" onclick="openEditStaffModal('${u.username}')">✏️ Edit</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openResetPwModal('${u.username}')">🔑 Reset PW</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteStaff('${u.username}')">🗑</button>
+        `}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddStaffModal(){
+  el('staff-modal-title').textContent='👤 Add Staff Account';
+  el('staff-edit-username').value='';
+  el('staff-name').value='';
+  el('staff-username').value='';
+  el('staff-username').readOnly=false;
+  el('staff-role').value='Technician';
+  el('staff-password').value='';
+  el('staff-password2').value='';
+  el('staff-pw-label').innerHTML='Password <span class="req">*</span>';
+  el('staff-pw-hint').textContent='';
+  openModal('modal-add-staff');
+}
+
+function openEditStaffModal(username){
+  const s=_staff.find(x=>x.username===username); if(!s)return;
+  el('staff-modal-title').textContent='✏️ Edit Staff Account';
+  el('staff-edit-username').value=username;
+  el('staff-name').value=s.name||'';
+  el('staff-username').value=username;
+  el('staff-username').readOnly=true;
+  el('staff-role').value=s.role||'Technician';
+  el('staff-password').value='';
+  el('staff-password2').value='';
+  el('staff-pw-label').innerHTML='New Password <span style="font-size:11px;color:var(--text-muted);">(leave blank to keep current)</span>';
+  el('staff-pw-hint').textContent='';
+  openModal('modal-add-staff');
+}
+
+function openResetPwModal(username){
+  const s=_staff.find(x=>x.username===username); if(!s)return;
+  el('staff-modal-title').textContent=`🔑 Reset Password — ${s.name}`;
+  el('staff-edit-username').value=username;
+  el('staff-name').value=s.name||'';
+  el('staff-username').value=username;
+  el('staff-username').readOnly=true;
+  el('staff-role').value=s.role||'Technician';
+  el('staff-password').value='';
+  el('staff-password2').value='';
+  el('staff-pw-label').innerHTML='New Password <span class="req">*</span>';
+  el('staff-pw-hint').textContent='Enter new password for '+s.name;
+  openModal('modal-add-staff');
+}
+
+async function saveStaff(){
+  const editUsername=el('staff-edit-username').value;
+  const isEdit=!!editUsername;
+  const name=el('staff-name').value.trim();
+  const username=el('staff-username').value.trim().toLowerCase();
+  const role=el('staff-role').value;
+  const pw=el('staff-password').value;
+  const pw2=el('staff-password2').value;
+  if(!name){alert('Full name is required.');return;}
+  if(!username){alert('Username is required.');return;}
+  // Check username conflict (only for new)
+  if(!isEdit){
+    const adminUser=(_settings.username||'admin').toLowerCase();
+    if(username===adminUser){alert('This username is already taken by admin.');return;}
+    if(_staff.find(s=>s.username===username)){alert('Username already exists. Choose a different one.');return;}
+  }
+  // Password validation
+  if(!isEdit||pw){
+    if(!pw){alert('Password is required.');return;}
+    if(pw!==pw2){alert('Passwords do not match.');return;}
+    if(pw.length<4){alert('Password must be at least 4 characters.');return;}
+  }
+  const existing=_staff.find(s=>s.username===(isEdit?editUsername:username));
+  const record={
+    username,name,
+    display:role==='Approver'?'Senior Technician & Approver':'Calibration Technician',
+    role,
+    password:pw||(existing?.password||''),
+    active:existing?.active!==false,
+    createdAt:existing?.createdAt||new Date().toISOString()
+  };
+  await SB.upsert('wl_staff',username,record);
+  if(isEdit){
+    const idx=_staff.findIndex(s=>s.username===editUsername);
+    if(idx>=0)_staff[idx]=record; else _staff.push(record);
+  } else {
+    _staff.push(record);
+  }
+  rebuildUsers();
+  closeModal('modal-add-staff');
+  renderPersonnel();
+  addAudit('👤',`Staff account <strong>${name}</strong> (${username}) ${isEdit?'updated':'created'}`);
+}
+
+async function deleteStaff(username){
+  const s=_staff.find(x=>x.username===username);
+  if(!confirm(`Delete account for "${s?.name}"? They will no longer be able to log in.`))return;
+  await SB.delete('wl_staff',username);
+  _staff=_staff.filter(x=>x.username!==username);
+  rebuildUsers();
+  renderPersonnel();
+  addAudit('🗑',`Staff account <strong>${s?.name}</strong> deleted`);
+}
+
+// ── FORGOT PASSWORD ──
+function showForgotPassword(){
+  el('forgot-overlay').style.display='flex';
+}
+function hideForgotPassword(){
+  el('forgot-overlay').style.display='none';
 }
 
 // ── INIT ──
